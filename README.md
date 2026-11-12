@@ -43,7 +43,7 @@ SRIM is © J.F. Ziegler (www.srim.org); only its output files are included here.
 
 If you use IonSil, please cite:
 
-M.A. Makhmudov, Z.A. Isakhanov. *Sputter-limited stoichiometry in ion-beam synthesis of transition-metal disilicides: analytical model, SRIM-2013/TRIM benchmark and comparison with experiments* (manuscript submitted, 2026).
+M.A. Makhmudov. *Sputter-limited stoichiometry in ion-beam synthesis of transition-metal disilicides: analytical model, SRIM-2013/TRIM benchmark and comparison with experiments* (manuscript submitted, 2026).
 
 ## Authors
 
