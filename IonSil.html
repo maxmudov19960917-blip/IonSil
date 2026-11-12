@@ -157,9 +157,10 @@ footer { margin-top: 24px; color: var(--muted); font-size: 12px; display: flex; 
   var LANG = q || saved || def;
   window.IONSIL_LANG = LANG;
   window.ionsilSetLang = function (l) {
-    try { localStorage.setItem("ionsil-lang", l); } catch (e) {}
+    var ok = false; try { localStorage.setItem("ionsil-lang", l); ok = localStorage.getItem("ionsil-lang") === l; } catch (e) {}
     var u = location.href.replace(/([?&])lang=(en|uz)&?/, "$1").replace(/[?&]$/, "");
-    location.href = u + (u.indexOf("?") >= 0 ? "&" : "?") + "lang=" + l;
+    if (ok && !/[?&]lang=/.test(location.search)) location.reload();
+    else location.href = u + (u.indexOf("?") >= 0 ? "&" : "?") + "lang=" + l;
   };
   function addSwitch() {
     var v = document.querySelector("header .ver"); if (!v || document.getElementById("langsw")) return;
