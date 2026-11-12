@@ -12,12 +12,15 @@ metal fraction, the sputter-limited saturation limit 1/Y and the dose required f
 No installation is needed. Download `IonSil.html` (or `index.html`) and open it in any modern web browser.
 The program runs entirely in the browser; no data is sent anywhere.
 
+**Language / Til:** the interface is available in **English** and **Uzbek**. Use the `UZ | EN` switch in the top-right corner,
+or add `?lang=en` / `?lang=uz` to the address. `index.html` opens in English by default, `IonSil.html` in Uzbek.
+
 ## Contents
 
 | Path | Description |
 |---|---|
-| `IonSil.html` | The program (single self-contained HTML file, v2.0) |
-| `index.html` | Same file, for GitHub Pages |
+| `IonSil.html` | The program (single self-contained HTML file, v2.0); Uzbek by default |
+| `index.html` | Same program, English by default (used by GitHub Pages) |
 | `validation/SRIM2013/` | Raw SRIM-2013 / TRIM outputs used for the code-to-code comparison in the paper |
 
 ## Validation data (SRIM-2013 / TRIM)
