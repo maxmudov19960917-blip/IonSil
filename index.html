@@ -1,0 +1,1784 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>IonSil</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="IonSil — Si ga metall ionlari implantatsiyasi profilini va silitsid hosil bo'lishini hisoblash dasturi">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap">
+<style>
+/* Layout: laboratoriya pulti — chapda boshqaruv paneli, o'ngda grafik va o'lchov kartochkalari; tor ekranda ustma-ust */
+:root {
+  --bg: #eef1f4;
+  --panel: #ffffff;
+  --ink: #16212e;
+  --muted: #5b6878;
+  --line: #d5dce4;
+  --grid: #e6ebf0;
+  --accent: #c0612a;      /* mis/ion dastasi */
+  --accent-ink: #ffffff;
+  --s2: #1f7a8c;          /* 2-seriya */
+  --s3: #6b4fa0;          /* 3-seriya */
+  --s4: #6f7d8c;          /* 4-seriya */
+  --ok: #2e7d4f; --ok-bg: #e3f2e9;
+  --warn: #9a6a00; --warn-bg: #fbf1d9;
+  --bad: #b23a3a; --bad-bg: #f8e3e3;
+  --info-bg: #e7eef6;
+  --f-display: "Newsreader", Georgia, "Times New Roman", serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", Roboto, Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10161d; --panel: #18212b; --ink: #e3e9ef; --muted: #93a1b0; --line: #2b3744; --grid: #222d38;
+    --accent: #e08048; --accent-ink: #10161d; --s2: #4fb3c6; --s3: #a58be0; --s4: #8e9bab;
+    --ok: #6cc892; --ok-bg: #173226; --warn: #e6b955; --warn-bg: #352b12; --bad: #ec8a8a; --bad-bg: #3a1c1c; --info-bg: #1b2a3a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10161d; --panel: #18212b; --ink: #e3e9ef; --muted: #93a1b0; --line: #2b3744; --grid: #222d38;
+  --accent: #e08048; --accent-ink: #10161d; --s2: #4fb3c6; --s3: #a58be0; --s4: #8e9bab;
+  --ok: #6cc892; --ok-bg: #173226; --warn: #e6b955; --warn-bg: #352b12; --bad: #ec8a8a; --bad-bg: #3a1c1c; --info-bg: #1b2a3a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14px; line-height: 1.5; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 20px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header.top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.brand h1 { font-family: var(--f-display); font-weight: 600; font-size: 30px; margin: 0; letter-spacing: -0.01em; }
+.brand h1 span { color: var(--accent); }
+.brand p { margin: 0; color: var(--muted); max-width: 60ch; }
+.ver { font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+nav.tabs { display: flex; gap: 4px; margin: 16px 0; overflow-x: auto; }
+nav.tabs button { font: inherit; font-weight: 500; border: 1px solid transparent; background: none; color: var(--muted); padding: 7px 14px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+nav.tabs button:hover { color: var(--ink); background: var(--panel); }
+nav.tabs button[aria-selected="true"] { color: var(--ink); background: var(--panel); border-color: var(--line); }
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.grid { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; min-width: 0; }
+.panel h2 { font-family: var(--f-display); font-weight: 600; font-size: 19px; margin: 0 0 12px; text-wrap: balance; }
+.panel h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 16px 0 8px; font-weight: 600; }
+.panel h3:first-child { margin-top: 0; }
+.field { display: grid; gap: 4px; margin-bottom: 12px; }
+.field label, .lbl { font-size: 13px; color: var(--muted); }
+.row { display: flex; gap: 8px; align-items: center; }
+.row > * { min-width: 0; }
+input[type="number"], input[type="text"], select { font: inherit; font-family: var(--f-mono); font-size: 13px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; width: 100%; }
+select { font-family: var(--f-body); }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.ionpick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.ionpick button { font: inherit; font-family: var(--f-mono); font-weight: 500; padding: 8px 0; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 5px; cursor: pointer; }
+.ionpick button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.ionmore { margin-top: 6px; }
+.check { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 10px; cursor: pointer; }
+.check input { margin-top: 3px; accent-color: var(--accent); }
+details { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 6px; }
+summary { cursor: pointer; font-size: 13px; font-weight: 500; }
+.hint { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
+.chartbox { position: relative; width: 100%; height: 360px; }
+.chartbox canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.readout { position: absolute; pointer-events: none; font-family: var(--f-mono); font-size: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 4px 7px; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; margin-top: 8px; color: var(--muted); }
+.legend i { display: inline-block; width: 18px; height: 3px; vertical-align: middle; margin-right: 6px; border-radius: 2px; }
+.legend i.dash { background: repeating-linear-gradient(90deg, currentColor 0 4px, transparent 4px 7px) !important; height: 2px; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin-top: 14px; }
+#optStats { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (max-width: 640px) { .stats, #optStats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.stat { background: var(--panel); padding: 10px 12px; min-width: 0; }
+.stat .k { font-size: 12px; color: var(--muted); }
+.stat .v { font-family: var(--f-mono); font-size: 17px; font-variant-numeric: tabular-nums; margin-top: 2px; overflow-wrap: anywhere; }
+.stat .v small { font-size: 12px; color: var(--muted); }
+.stat.key .v { color: var(--accent); }
+.verdict { margin-top: 14px; padding: 10px 12px; border-radius: 6px; display: flex; gap: 10px; align-items: flex-start; }
+.verdict .pill { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 8px; border-radius: 99px; white-space: nowrap; margin-top: 1px; }
+.verdict.ok { background: var(--ok-bg); } .verdict.ok .pill { background: var(--ok); color: var(--ok-bg); }
+.verdict.mid, .verdict.low { background: var(--warn-bg); } .verdict.mid .pill, .verdict.low .pill { background: var(--warn); color: var(--warn-bg); }
+.verdict.high { background: var(--bad-bg); } .verdict.high .pill { background: var(--bad); color: var(--bad-bg); }
+.verdict.info { background: var(--info-bg); } .verdict.info .pill { background: var(--s2); color: var(--info-bg); }
+.note { margin-top: 10px; font-size: 13px; color: var(--muted); }
+.note b { color: var(--ink); font-weight: 600; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.btn { font: inherit; font-size: 13px; font-weight: 500; padding: 7px 12px; border-radius: 5px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.toast { font-size: 13px; color: var(--ok); align-self: center; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips label { display: inline-flex; gap: 6px; align-items: center; font-family: var(--f-mono); border: 1px solid var(--line); border-radius: 5px; padding: 4px 9px; cursor: pointer; background: var(--bg); }
+.chips input { accent-color: var(--accent); margin: 0; }
+.tbl-wrap { overflow-x: auto; margin-top: 14px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-weight: 600; color: var(--muted); font-size: 12px; }
+td.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; text-align: right; }
+th.num { text-align: right; }
+.mrow { display: grid; grid-template-columns: 56px 1fr 1fr; gap: 6px; align-items: center; margin-bottom: 8px; }
+.mrow .nm { display: flex; gap: 6px; align-items: center; font-family: var(--f-mono); font-weight: 500; }
+.mrow .nm input { accent-color: var(--accent); }
+.mhead { display: grid; grid-template-columns: 56px 1fr 1fr; gap: 6px; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.doc { max-width: 72ch; }
+.warns { margin-top: 10px; display: grid; gap: 6px; }
+.warns div { font-size: 13px; padding: 7px 10px; border-radius: 5px; background: var(--warn-bg); color: var(--ink); }
+.warns div.err { background: var(--bad-bg); }
+.warns div.usr { background: var(--info-bg); }
+.zones { margin-top: 10px; font-size: 13px; }
+.zones span.z { display: inline-block; font-family: var(--f-mono); font-size: 12px; padding: 2px 7px; border-radius: 4px; background: var(--info-bg); margin: 2px 4px 2px 0; }
+textarea { font: inherit; font-family: var(--f-mono); font-size: 12px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 8px; width: 100%; min-height: 120px; resize: vertical; }
+.steprow { display: grid; grid-template-columns: 22px 1fr 1fr; gap: 6px; align-items: center; margin-bottom: 6px; }
+.seqrow { display: grid; grid-template-columns: 18px 58px 1.1fr 1fr 44px; gap: 5px; align-items: center; margin-bottom: 6px; }
+.seqrow input, .seqrow select { padding: 5px 4px; font-size: 12px; }
+.seqhead { display: grid; grid-template-columns: 18px 58px 1.1fr 1fr 44px; gap: 5px; font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
+.subgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 960px) { .subgrid { grid-template-columns: minmax(0, 1fr); } }
+.ok-txt { color: var(--ok); font-weight: 600; } .bad-txt { color: var(--bad); font-weight: 600; }
+.vgrid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 960px) { .vgrid { grid-template-columns: minmax(0, 1fr); } }
+.vstack { display: grid; gap: 16px; }
+.src { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.55; }
+.src a { color: var(--s2); }
+td.good { color: var(--ok); font-weight: 600; } td.fair { color: var(--warn); font-weight: 600; }
+.lead { color: var(--muted); max-width: 80ch; margin: 0 0 14px; }
+.doc h2 { margin-top: 0; }
+.doc h3 { font-family: var(--f-display); font-size: 17px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--ink); margin: 22px 0 6px; }
+.doc p, .doc li { line-height: 1.65; }
+.eq { font-family: var(--f-mono); font-size: 13px; background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 8px 12px; overflow-x: auto; white-space: pre; }
+footer { margin-top: 24px; color: var(--muted); font-size: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Ion<span>Sil</span></h1>
+      <p>Si ga metall ionlari implantatsiyasi: konsentratsiya profili, purkash cheklovi va silitsid hosil bo'lishi</p>
+    </div>
+    <div class="ver">v2.0 · LSS/ZBL + Sigmund · tajriba bilan tekshirilgan</div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="t-profile" aria-selected="true" data-tab="profile">Implantatsiya profili</button>
+    <button role="tab" id="t-map" aria-selected="false" data-tab="map">Energiya xaritasi</button>
+    <button role="tab" id="t-multi" aria-selected="false" data-tab="multi">Ketma-ket implantatsiya</button>
+    <button role="tab" id="t-opt" aria-selected="false" data-tab="opt">Optimal rejim</button>
+    <button role="tab" id="t-thermal" aria-selected="false" data-tab="thermal">Termik ishlov</button>
+    <button role="tab" id="t-unc" aria-selected="false" data-tab="unc">Noaniqlik</button>
+    <button role="tab" id="t-valid" aria-selected="false" data-tab="valid">Validatsiya</button>
+    <button role="tab" id="t-val" aria-selected="false" data-tab="val">Tekshiruv</button>
+    <button role="tab" id="t-about" aria-selected="false" data-tab="about">Usul haqida</button>
+  </nav>
+
+  <!-- 1. PROFIL -->
+  <section id="tab-profile" role="tabpanel">
+    <div class="grid">
+      <div class="panel">
+        <h3>Ion</h3>
+        <div class="ionpick" id="ionpick"></div>
+        <div class="ionmore"><select id="ionMore" aria-label="Boshqa ionlar"></select></div>
+
+        <h3>Rejim</h3>
+        <div class="field">
+          <div class="row" style="justify-content:space-between"><label for="E">Energiya, keV</label></div>
+          <div class="row"><input type="range" id="Er" min="1" max="300" step="1" value="50" aria-label="Energiya slayderi"><input type="number" id="E" min="0.5" max="2000" step="1" value="50" style="width:84px"></div>
+        </div>
+        <div class="field">
+          <label for="D">Doza, ion/sm²</label>
+          <div class="row"><input type="range" id="Dr" min="14" max="18" step="0.01" value="16.70" aria-label="Doza slayderi (log)"><input type="text" id="D" value="5e16" style="width:84px"></div>
+          <p class="hint">Masalan: 5e16 = 5·10¹⁶</p>
+        </div>
+        <div class="field">
+          <label for="ang">Tushish burchagi θ, °</label>
+          <input type="number" id="ang" value="0" min="0" max="89" step="1">
+          <p class="hint">0° — normal tushish. Rp → Rp·cosθ, Y → Y·cos⁻⁵ᐟ³θ; θ ≤ 60° da o'rinli.</p>
+        </div>
+        <label class="check"><input type="checkbox" id="sp" checked><span>Sirt purkalishini hisobga olish<br><span class="hint">Yuqori dozada konsentratsiyani 1/Y bilan cheklaydi</span></span></label>
+        <div class="field">
+          <label for="tgt">Maqsadli faza</label>
+          <select id="tgt"></select>
+        </div>
+
+        <details id="ovr">
+          <summary>Qo'lda kiritish (SRIM / tajriba)</summary>
+          <p class="hint">Bo'sh qoldirilsa, dastur o'zi hisoblaydi.</p>
+          <div class="field" style="margin-top:8px"><label for="oRp">Rp, nm</label><input type="number" id="oRp" min="0" step="0.1" placeholder="avto"></div>
+          <div class="field"><label for="odRp">ΔRp, nm</label><input type="number" id="odRp" min="0" step="0.1" placeholder="avto"></div>
+          <div class="field"><label for="oY">Purkash koeffitsiyenti Y</label><input type="number" id="oY" min="0" step="0.01" placeholder="avto"></div>
+        </details>
+      </div>
+
+      <div class="panel">
+        <h2 id="pTitle">Chuqurlik bo'yicha taqsimot</h2>
+        <div class="chartbox" id="cbProfile"><canvas id="cProfile"></canvas><div class="readout" id="roProfile" hidden></div></div>
+        <div class="legend" id="lgProfile"></div>
+        <div class="verdict" id="verdict"><span class="pill"></span><span class="txt"></span></div>
+        <div class="warns" id="warns"></div>
+        <div class="zones" id="zones"></div>
+        <div class="stats" id="stats"></div>
+        <div class="actions">
+          <button class="btn primary" id="cpReport">Hisobotni nusxalash</button>
+          <button class="btn" id="cpCsv">Profilni nusxalash (CSV)</button>
+          <button class="btn dl" id="dlCsv">CSV yuklab olish</button>
+          <button class="btn dl" id="dlPng">Grafikni PNG saqlash</button>
+          <button class="btn" id="cfgExport">Sozlamalarni nusxalash (JSON)</button>
+          <button class="btn dl" id="cfgDl">JSON yuklab olish</button>
+          <button class="btn dl" id="repDl">Hisobot (HTML) yuklab olish</button>
+          <span class="toast" id="toast" aria-live="polite"></span>
+        </div>
+        <details style="margin-top:12px">
+          <summary>Sozlamalarni yuklash (JSON)</summary>
+          <p class="hint">Ilgari saqlangan JSON matnini qo'ying yoki faylni tanlang. Barcha bo'limlarning kirish qiymatlari tiklanadi.</p>
+          <textarea id="cfgText" aria-label="JSON sozlamalar" style="min-height:90px"></textarea>
+          <div class="actions" style="margin-top:8px"><input type="file" id="cfgFile" accept=".json,application/json" aria-label="JSON fayl"><button class="btn primary" id="cfgApply">Qo'llash</button></div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. XARITA -->
+  <section id="tab-map" role="tabpanel" hidden>
+    <div class="grid">
+      <div class="panel">
+        <h3>Ionlar</h3>
+        <div class="chips" id="mapIons"></div>
+        <h3>Ko'rsatkich</h3>
+        <div class="field"><select id="mapMetric" aria-label="Ko'rsatkich">
+          <option value="Rp">Proyektiv yugurish yo'li Rp, nm</option>
+          <option value="dRp">Standart chetlanish ΔRp, nm</option>
+          <option value="Y">Purkash koeffitsiyenti Y</option>
+          <option value="fsat">Maksimal ulush 1/Y, at.%</option>
+          <option value="dose">MSi₂ uchun kerakli doza, ion/sm²</option>
+        </select></div>
+        <div class="field"><label for="mapEmax">Energiya chegarasi, keV</label><input type="number" id="mapEmax" value="200" min="5" max="2000" step="5"></div>
+        <p class="hint">Kerakli doza purkashni hisobga olib topiladi. Egri chiziq uzilgan joyda MSi₂ stexiometriyasiga to'g'ridan-to'g'ri implantatsiya bilan erishib bo'lmaydi.</p>
+      </div>
+      <div class="panel">
+        <h2 id="mapTitle">Energiyaga bog'liqlik</h2>
+        <div class="chartbox" id="cbMap"><canvas id="cMap"></canvas><div class="readout" id="roMap" hidden></div></div>
+        <div class="legend" id="lgMap"></div>
+        <div class="tbl-wrap"><table id="mapTable"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. KETMA-KET IMPLANTATSIYA -->
+  <section id="tab-multi" role="tabpanel" hidden>
+    <div class="grid">
+      <div class="panel">
+        <h3>Bosqichlar</h3>
+        <div class="seqhead"><span></span><span>Ion</span><span>E, keV</span><span>Doza, sm⁻²</span><span>θ, °</span></div>
+        <div id="seqRows"></div>
+        <label class="check" style="margin-top:8px"><input type="checkbox" id="seqAlign" checked><span>Rp ni bir chuqurlikka moslash<br><span class="hint">Energiyalar avtomatik tanlanadi</span></span></label>
+        <div class="field"><label for="seqRp">Umumiy Rp, nm</label><input type="number" id="seqRp" value="40" min="2" max="500" step="1"></div>
+        <label class="check"><input type="checkbox" id="seqSp" checked><span>Sirt purkalishi (har bir bosqichda)</span></label>
+        <p class="hint">Sonli model: har bir bosqichda sirt chekinadi, oldingi bosqich profili siljiydi va sirtdagi atomlar tarkibga mutanosib purkaladi. Atomlar balansi pastdagi jadvalda.</p>
+      </div>
+      <div class="panel">
+        <h2>Ketma-ket implantatsiyadan keyingi profil</h2>
+        <div class="chartbox" id="cbMulti"><canvas id="cMulti"></canvas><div class="readout" id="roMulti" hidden></div></div>
+        <div class="legend" id="lgMulti"></div>
+        <div class="verdict" id="mVerdict"><span class="pill"></span><span class="txt"></span></div>
+        <h3>Bosqichlar</h3>
+        <div class="tbl-wrap" style="margin-top:0"><table id="mTable"></table></div>
+        <h3>Atomlar balansi</h3>
+        <div class="tbl-wrap" style="margin-top:0"><table id="mBal"></table></div>
+        <p class="hint">Saqlangan + purkalgan + qaytgan = kiritilgan doza. "Qaytgan" — sirt ustiga tushgan Gauss dumi (taxminan teskari sochilish) va diskretizatsiya qoldig'i.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- OPTIMAL REJIM -->
+  <section id="tab-opt" role="tabpanel" hidden>
+    <div class="grid">
+      <div class="panel">
+        <h3>Maqsadli silitsid</h3>
+        <div class="ionpick" id="optPick"></div>
+        <h3>Talablar</h3>
+        <div class="field"><label for="oDepth">Qatlam markazi chuqurligi, nm</label><input type="number" id="oDepth" value="60" min="5" max="500" step="1"></div>
+        <div class="field"><label for="oThick">Kerakli qatlam qalinligi, nm</label><input type="number" id="oThick" value="30" min="1" max="300" step="1"></div>
+        <div class="field"><label for="oEmax">Implanter energiyasi chegarasi, keV</label><input type="number" id="oEmax" value="200" min="10" max="2000" step="10"></div>
+        <p class="hint">Dastur energiyani purkash tufayli sirt chekinishini hisobga olib, qatlam markazi berilgan chuqurlikka tushadigan qilib tanlaydi. So'ng stexiometriyaga erishib bo'lishini va kerakli dozani topadi.</p>
+      </div>
+      <div class="panel">
+        <h2 id="optTitle">Tavsiya etilgan rejim</h2>
+        <div class="verdict" id="optVerdict"><span class="pill"></span><span class="txt"></span></div>
+        <div class="stats" id="optStats"></div>
+        <div class="chartbox" id="cbOpt" style="margin-top:14px"><canvas id="cOpt"></canvas><div class="readout" id="roOpt" hidden></div></div>
+        <div class="legend" id="lgOpt"></div>
+        <div id="optAlt" class="note"></div>
+        <h3 style="margin-top:20px">Eng yaxshi rejimlar (to'r bo'yicha qidiruv)</h3>
+        <div class="row" style="flex-wrap:wrap;gap:10px">
+          <div class="field" style="width:150px"><label for="otRec">Maks. sirt chekinishi, nm</label><input type="number" id="otRec" value="100" min="1" step="5"></div>
+          <div class="field" style="width:110px"><label for="otEmin">E min, keV</label><input type="number" id="otEmin" value="10" min="1" step="1"></div>
+          <div class="field" style="width:130px"><label for="otDmin">Doza min, sm⁻²</label><input type="text" id="otDmin" value="1e15"></div>
+          <div class="field" style="width:130px"><label for="otDmax">Doza max, sm⁻²</label><input type="text" id="otDmax" value="2e18"></div>
+        </div>
+        <div class="tbl-wrap" style="margin-top:0"><table id="optTop"></table></div>
+        <p class="hint" id="optTopNote"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- TERMIK ISHLOV -->
+  <section id="tab-thermal" role="tabpanel" hidden>
+    <div class="grid">
+      <div class="panel">
+        <h3>Boshlang'ich profil</h3>
+        <p class="hint" style="margin-top:0">"Implantatsiya profili" bo'limidagi joriy hisob: <span id="thSource"></span></p>
+        <h3>Diffuziya parametrlari</h3>
+        <div class="field"><label for="thPreset">Parametrlar to'plami</label><select id="thPreset"><option value="Cr">Cr, Si da (adabiyot)</option><option value="user">Foydalanuvchi kiritadi</option></select></div>
+        <div class="row"><div class="field"><label for="thD0">D₀, sm²/s</label><input type="number" id="thD0" value="0.0026" step="any"></div><div class="field"><label for="thEa">Eₐ, eV</label><input type="number" id="thEa" value="0.81" step="any"></div></div>
+        <p class="hint" id="thSrc"></p>
+        <div class="field"><label for="thCs">Eruvchanlik chegarasi Cₛ, at.%</label><input type="number" id="thCs" value="" min="0" step="any" placeholder="bo'sh — cheklanmagan"><p class="hint">Cₛ dan ortiq atomlar pretsipitat sifatida harakatsiz deb olinadi.</p></div>
+        <div class="field"><label for="thSurf">Sirtdagi chegaraviy shart</label><select id="thSurf"><option value="reflect">Oqim yo'q (atomlar sirtdan chiqmaydi)</option><option value="sink">Sirt yutadi (C = 0)</option></select></div>
+        <h3>Harorat–vaqt bosqichlari</h3>
+        <div class="steprow" style="font-size:11.5px;color:var(--muted)"><span></span><span>T, °C</span><span>t, s</span></div>
+        <div class="steprow"><input type="checkbox" id="thOn0" checked aria-label="1-bosqich"><input type="number" id="thT0" value="700" step="10" aria-label="T1"><input type="number" id="tht0" value="5400" step="10" aria-label="t1"></div>
+        <div class="steprow"><input type="checkbox" id="thOn1" checked aria-label="2-bosqich"><input type="number" id="thT1" value="1000" step="10" aria-label="T2"><input type="number" id="tht1" value="60" step="10" aria-label="t2"></div>
+        <div class="steprow"><input type="checkbox" id="thOn2" aria-label="3-bosqich"><input type="number" id="thT2" value="1000" step="10" aria-label="T3"><input type="number" id="tht2" value="1200" step="10" aria-label="t3"></div>
+        <p class="hint">Standart bosqichlar Dudda va boshq. (1993) ishidagi qizdirish rejimiga mos: 700 °C 90 min va 1000 °C 60 s.</p>
+      </div>
+      <div class="panel">
+        <h2>Termik ishlovdan keyingi profil</h2>
+        <div class="chartbox" id="cbTh"><canvas id="cTh"></canvas><div class="readout" id="roTh" hidden></div></div>
+        <div class="legend" id="lgTh"></div>
+        <div class="verdict" id="thVerdict"><span class="pill"></span><span class="txt"></span></div>
+        <div class="stats" id="thStats"></div>
+        <div class="actions"><button class="btn" id="thConv">Konvergentsiyani tekshirish</button><button class="btn" id="thTest">Analitik test</button></div>
+        <p class="note" id="thConvOut"></p>
+        <p class="hint">Model: D(T) = D₀·exp(−Eₐ/k_BT), ∂C/∂t = ∂/∂x(D ∂C/∂x), θ-sxema (Crank–Nicolson yoki to'liq yashirin), chuqur chegarada oqim yo'q. Model erigan atomlar diffuziyasini tavsiflaydi; faza hosil bo'lishi, pretsipitatlar o'sishi va radiatsion kuchaygan diffuziya kiritilmagan. D₀ va Eₐ har bir metall–Si juftligi uchun manba bilan asoslanishi kerak.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- NOANIQLIK -->
+  <section id="tab-unc" role="tabpanel" hidden>
+    <div class="grid">
+      <div class="panel">
+        <h3>Hisob</h3>
+        <p class="hint" style="margin-top:0">"Implantatsiya profili" bo'limidagi joriy hisob: <span id="ucSource"></span></p>
+        <h3>Nisbiy standart chetlanish, %</h3>
+        <div class="row"><div class="field"><label for="ucRp">Rp</label><input type="number" id="ucRp" value="15" min="0" step="1"></div><div class="field"><label for="ucdRp">ΔRp</label><input type="number" id="ucdRp" value="15" min="0" step="1"></div></div>
+        <div class="row"><div class="field"><label for="ucY">Y</label><input type="number" id="ucY" value="15" min="0" step="1"></div><div class="field"><label for="ucD">Doza</label><input type="number" id="ucD" value="5" min="0" step="1"></div></div>
+        <p class="hint">Standart qiymatlar: Rp va ΔRp uchun ±15% (jadval qiymatlari bilan solishtiruv), Y uchun ±15% (Uₛ noaniqligi), doza uchun ±5% (dozimetriya).</p>
+        <div class="row"><div class="field"><label for="ucN">Takrorlashlar soni</label><input type="number" id="ucN" value="400" min="50" max="3000" step="50"></div><div class="field"><label for="ucSeed">Seed</label><input type="number" id="ucSeed" value="42" step="1"></div></div>
+        <button class="btn primary" id="ucRun">Hisoblash</button>
+      </div>
+      <div class="panel">
+        <h2>Natijaning ishonch oralig'i</h2>
+        <div class="chartbox" id="cbUc"><canvas id="cUc"></canvas><div class="readout" id="roUc" hidden></div></div>
+        <div class="legend" id="lgUc"></div>
+        <div class="tbl-wrap"><table id="ucTable"></table></div>
+        <h3>Sezgirlik reytingi (parametr +1σ, qolganlari nominal)</h3>
+        <div class="tbl-wrap" style="margin-top:0"><table id="ucSens"></table></div>
+        <p class="hint" id="ucNote"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- VALIDATSIYA -->
+  <section id="tab-valid" role="tabpanel" hidden>
+    <p class="lead">SRIM/TRIM yoki adabiyot qiymatlarini va tajriba profillarini yuklab, IonSil bilan miqdoriy solishtiring. SRIM ham simulyatsiya vositasi: u bilan moslik tajriba validatsiyasi o'rnini bosmaydi. Modelni kalibrlash uchun ishlatilgan ma'lumotni validatsiya uchun qayta ishlatmang.</p>
+    <div class="subgrid">
+      <div class="panel">
+        <h2>Rp, ΔRp, Y: etalon bilan solishtirish</h2>
+        <p class="hint" style="margin-top:0">CSV: <code>ion,E_keV,Rp_nm,dRp_nm,Y</code>. Bo'sh katak — o'sha kattalik solishtirilmaydi. Ion belgisi: B, P, As, Ti, Cr, Co, Ni, Nb, Mo, Ta, W va boshqalar. Nishon: amorf Si, normal tushish.</p>
+        <textarea id="vaSrim" aria-label="Etalon jadvali">ion,E_keV,Rp_nm,dRp_nm,Y
+</textarea>
+        <div class="actions"><input type="file" id="vaSrimFile" accept=".csv,.txt" aria-label="CSV fayl"><button class="btn" id="vaSample">Namuna yuklash</button></div>
+        <p class="hint" id="vaErr"></p>
+        <div class="tbl-wrap"><table id="vaTable"></table></div>
+        <h3>Xatolik ko'rsatkichlari</h3>
+        <div class="tbl-wrap" style="margin-top:0"><table id="vaMetrics"></table></div>
+      </div>
+      <div class="panel">
+        <h2>Tajriba profili bilan solishtirish</h2>
+        <p class="hint" style="margin-top:0">Model: "Implantatsiya profili" bo'limidagi sozlamalar (<span id="vaSource"></span>). CSV: <code>chuqurlik_nm, ulush_at%, [noaniqlik_at%]</code>.</p>
+        <textarea id="vaExp" aria-label="Tajriba nuqtalari" placeholder="masalan:&#10;20, 5.1, 0.5&#10;40, 12.3, 0.5"></textarea>
+        <div class="actions"><input type="file" id="vaExpFile" accept=".csv,.txt" aria-label="CSV fayl"></div>
+        <div class="chartbox" id="cbVa" style="height:300px"><canvas id="cVa"></canvas><div class="readout" id="roVa" hidden></div></div>
+        <div class="legend" id="lgVa"></div>
+        <p class="note" id="vaExpOut"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. TEKSHIRUV -->
+  <section id="tab-val" role="tabpanel" hidden>
+    <p class="lead">Dastur natijalari tekshirilgan (Scopus) maqolalardagi tajriba ma'lumotlari bilan solishtirildi. Barcha model qiymatlari shu sahifa ochilganda dasturning o'zi tomonidan qayta hisoblanadi.</p>
+    <div class="vgrid">
+      <div class="panel">
+        <h2>Cr⁺ → Si(111), 200 keV: Cr ulushi va doza</h2>
+        <div class="chartbox" id="cbVal"><canvas id="cVal"></canvas><div class="readout" id="roVal" hidden></div></div>
+        <div class="legend" id="lgVal"></div>
+        <div class="tbl-wrap"><table id="valTable"></table></div>
+        <p class="src">Tajriba: Dudda Chr., Mantl S., Dieker Ch., Dolle M., Lüth H. Ion beam synthesis of buried CrSi₂ layers. <i>Nucl. Instr. Meth. Phys. Res. B</i> 80/81 (1993) 764–767, 1a-rasm. RBS bilan o'lchangan, 700 °C 90 min va 1000 °C 60 s qizdirishdan keyin. Nuqtalar rasmdan raqamlashtirilgan (o'q bo'yicha aniqlik ±0,5 at.%, ±0,03·10¹⁷ sm⁻²). <a href="https://doi.org/10.1016/0168-583X(93)90677-X" target="_blank" rel="noopener">doi:10.1016/0168-583X(93)90677-X</a></p>
+      </div>
+      <div class="vstack">
+        <div class="panel">
+          <h2>Qatlam geometriyasi, 3·10¹⁷ sm⁻²</h2>
+          <div class="tbl-wrap" style="margin-top:0"><table id="geoTable"></table></div>
+          <p class="src">Tajriba: o'sha maqoladagi XTEM tasviri (4-rasm): "50 nm Si ostida 90 nm qalinlikdagi CrSi₂ qatlami". Model: saqlangan Cr dozasi CrSi₂ dagi Cr zichligiga (2,73·10²² sm⁻³) bo'lingan, qatlam markazi profilning og'irlik markaziga qo'yilgan.</p>
+        </div>
+        <div class="panel">
+          <h2>Xulosa</h2>
+          <div id="valSummary" class="note" style="margin-top:0"></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <h2>Yuqori tokli MEVVA implantatsiyasi: purkash chegarasi va tajriba</h2>
+      <div class="tbl-wrap" style="margin-top:0"><table id="mevvaTable"></table></div>
+      <p class="src">Tajriba: Zhu H.N., Liu B.X. High current metal-ion implantation to fabricate metal silicides. <i>Surf. Coat. Technol.</i> 131 (2000) 307–316, 2-jadval va matn. <a href="https://doi.org/10.1016/S0257-8972(00)00835-5" target="_blank" rel="noopener">doi:10.1016/S0257-8972(00)00835-5</a>. Ion energiyasi: tezlatish kuchlanishi (Cr uchun 40 kV, qolganlari 45 kV) × MEVVA manbaining o'rtacha zaryadi (Brown va boshq. ma'lumotlari bo'yicha taxminiy). Mezon: agar 1/Y ≥ 33,3% bo'lsa (±1 at.% chidamlilik bilan), model stexiometrik MSi₂ ni, aks holda metall yetishmasligini bashorat qiladi. * CrSi₂ yarimo'tkazgich, shuning uchun uning qarshiligi metall silitsidlar bilan solishtirilmaydi.</p>
+      <p class="src">Uchinchi maqola (Berky W. va boshq., <i>Nucl. Instr. Meth. B</i> 249 (2006) 200–203) MeV energiyali Ar ionlari bilan Ta/Si chegarasini aralashtirishga bag'ishlangan. Bu jarayon dastur modeli doirasidan tashqarida, shuning uchun u solishtirishga kiritilmadi.</p>
+    </div>
+  </section>
+
+  <!-- 5. USUL -->
+  <section id="tab-about" role="tabpanel" hidden>
+    <div class="panel doc">
+      <h2>Hisoblash usuli</h2>
+      <p>IonSil yupqa silitsid qatlamlari va nanokristallarini ion-nur sintezi bilan olishda implantatsiya rejimini tanlash uchun mo'ljallangan. Dastur ion energiyasi va dozasidan kremniydagi metall atomlarining chuqurlik bo'yicha taqsimotini hisoblaydi. Shu taqsimot asosida qaysi silitsid fazasi hosil bo'lishini baholaydi.</p>
+
+      <h3>1. Ionning to'xtatilishi</h3>
+      <p>Yadroviy to'xtatish ZBL universal potensiali bilan, elektron to'xtatish Lindhard–Scharff modeli bilan hisoblanadi:</p>
+      <div class="eq">ε = 32,53·M₂·E[keV] / (Z₁Z₂(M₁+M₂)(Z₁^0,23 + Z₂^0,23))
+sₙ(ε) = ln(1+1,1383ε) / 2(ε + 0,01321ε^0,21226 + 0,19593ε^0,5),  ε ≤ 30
+Sₑ(E) = k·E^½</div>
+
+      <h3>2. Yugurish yo'li</h3>
+      <div class="eq">R  = ∫₀ᴱ dE / N(Sₙ + Sₑ)
+Rp = R / (1 + M₂/3M₁)
+ΔRp = (2/3)·Rp·√(M₁M₂) / (M₁+M₂)</div>
+      <p>Analitik model aniqligi taxminan ±20%. Nashr uchun aniq qiymatlar kerak bo'lsa, SRIM natijalarini "Qo'lda kiritish" bo'limiga yozing. Qolgan hisoblar shu qiymatlar bilan bajariladi.</p>
+
+      <h3>3. Purkash va to'yinish</h3>
+      <p>Purkash koeffitsiyenti Sigmund nazariyasi bo'yicha hisoblanadi, α koeffitsiyenti Yamamura approksimatsiyasidan olinadi. Silitsid uchun Uₛ = 4,7 eV. Yuqori dozada sirt chekinadi va profil Schulz–Wittmaack yechimiga o'tadi:</p>
+      <div class="eq">Y = 0,042·α(M₂/M₁)·Sₙ(E) / Uₛ
+f(x) = [erf((x + d − Rp)/√2ΔRp) − erf((x − Rp)/√2ΔRp)] / 2Y,   d = Φ·Y/N
+f_max → 1/Y  (Φ → ∞)</div>
+      <p>Agar 1/Y &lt; 1/3 bo'lsa, MSi₂ stexiometriyasiga to'g'ridan-to'g'ri implantatsiya bilan erishib bo'lmaydi. Bunday holda metall qatlamini magnetron purkash bilan cho'ktirib, keyin ion bilan aralashtirish kerak bo'ladi.</p>
+
+      <h3>4. Faza bahosi</h3>
+      <p>Cho'qqidagi metall ulushi silitsid fazalarining stexiometriyasi bilan solishtiriladi: MSi₂ uchun 33,3 at.%, MSi uchun 50 at.%, M₅Si₃ uchun 62,5 at.%. Saqlangan doza MSi₂ dagi metall atomlari zichligiga bo'linadi. Natijada termik ishlovdan keyingi ekvivalent qatlam qalinligi topiladi.</p>
+
+      <h3>v2.0 modullari</h3>
+      <ul>
+        <li><b>Ketma-ket implantatsiya</b> — sonli model: doza kichik qadamlarga bo'linadi, har qadamda sirt Y·dΦ/N ga chekinadi, sirt qatlamidagi atomlar tarkibga mutanosib purkaladi va yangi atomlar Gauss taqsimoti bo'yicha qo'shiladi. Bitta bosqich uchun natija Schulz–Wittmaack analitik yechimidan 0,4 at.% dan kam farq qiladi.</li>
+        <li><b>Termik ishlov</b> — Arrhenius qonuni va Fikning ikkinchi qonuni, θ-sxema, eruvchanlik chegarasi bilan. Analitik Gauss yechimi bilan tekshiruv: xato &lt; 0,01%; atomlar balansi 10⁻¹⁰ aniqlikda.</li>
+        <li><b>Noaniqlik</b> — Monte-Carlo (normal taqsimot, takrorlanuvchi seed) va bir parametrli sezgirlik reytingi.</li>
+        <li><b>Validatsiya</b> — SRIM/adabiyot jadvali va tajriba profili uchun nisbiy xato, MAE, RMSE va bias.</li>
+        <li><b>Optimal rejim</b> — sirt chekinishini hisobga olgan iteratsion tanlov va 36 × 36 to'r bo'yicha eng yaxshi 5 rejim.</li>
+        <li><b>Tushish burchagi</b> — Rp·cosθ va Y·cos⁻⁵ᐟ³θ (θ ≤ 60°).</li>
+      </ul>
+      <p>Kiritilmagan: kristall kanallanish, faza hosil bo'lish kinetikasi, tanlab purkash va qatlam shishishi. Ular alohida fizik model va validatsiya ma'lumotlari talab qiladi.</p>
+
+      <h3>Fizik parametrlar va manbalar</h3>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Parametr</th><th>Qiymat</th><th>Manba / holati</th></tr></thead>
+        <tbody>
+          <tr><td>Atom massalari, Z</td><td>Ti 47,867; Cr 51,996; Co 58,933; Ni 58,693; Nb 92,906; Mo 95,95; Ta 180,948; W 183,84; Ar 39,948; Si 28,0855</td><td>IUPAC standart atom og'irliklari</td></tr>
+          <tr><td>Si zichligi, N</td><td>2,329 g/sm³; 4,99·10²² sm⁻³</td><td>umumqabul qilingan qiymat</td></tr>
+          <tr><td>Si sirt bog'lanish energiyasi Uₛ</td><td>4,7 eV</td><td>Si sublimatsiya issiqligiga yaqin; noaniqligi ±15% sezgirlik tahlilida</td></tr>
+          <tr><td>TaSi₂ zichligi</td><td>9,14 g/sm³</td><td>ma'lumotnoma qiymati (tekshirildi)</td></tr>
+          <tr><td>NbSi₂ zichligi</td><td>5,66 g/sm³</td><td>adabiyotda 5,53–5,7 (tekshirildi)</td></tr>
+          <tr><td>CrSi₂ zichligi</td><td>4,91 g/sm³</td><td>ma'lumotnoma qiymati (tekshirildi; v1.x da 4,98 edi)</td></tr>
+          <tr><td>TiSi₂ zichligi</td><td>4,02 g/sm³</td><td>ma'lumotnoma qiymati (tekshirildi; v1.x da 4,04 edi)</td></tr>
+          <tr><td>WSi₂ zichligi</td><td>9,3 g/sm³</td><td>ma'lumotnoma qiymati (tekshirildi; v1.x da 9,86 edi)</td></tr>
+          <tr><td>MoSi₂, CoSi₂, NiSi₂ zichligi</td><td>6,24; 4,95; 4,83 g/sm³</td><td>manba tekshirilmagan — foydalanishdan oldin tasdiqlang</td></tr>
+          <tr><td>Cr diffuziyasi Si da</td><td>D = 2,6·10⁻³·exp(−0,81 eV/k_BT) sm²/s, 20–1050 °C</td><td>Zhu, Barbier, MRS Proc. 163 (1989) 567</td></tr>
+          <tr><td>Boshqa metallar diffuziyasi</td><td>—</td><td>foydalanuvchi manba bilan kiritadi</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Farazlar</h3>
+      <ul>
+        <li>Nishon amorf Si, zichligi 2,329 g/sm³. Kanallanish hisobga olinmaydi (odatda namuna 7° ga og'diriladi).</li>
+        <li>Natijalar tarkibni tavsiflaydi: 33,3 at.% metall ulushi MSi₂ kristall fazasi hosil bo'lganini isbotlamaydi.</li>
+        <li>Atom zichligi o'zgarmas, ya'ni qatlam shishishi hisobga olinmaydi.</li>
+        <li>Diffuziya va radiatsion kuchaygan diffuziya hisobga olinmaydi. Profil implantatsiyadan keyingi, qizdirishgacha bo'lgan holatni ko'rsatadi.</li>
+        <li>Ionlar sirtga normal tushadi.</li>
+      </ul>
+
+      <h3>Adabiyotlar</h3>
+      <ol>
+        <li>Lindhard J., Scharff M., Schiøtt H.E. Range concepts and heavy ion ranges. Mat. Fys. Medd. Dan. Vid. Selsk. 33 (1963) 14.</li>
+        <li>Ziegler J.F., Biersack J.P., Littmark U. The Stopping and Range of Ions in Solids. Pergamon, 1985.</li>
+        <li>Sigmund P. Theory of sputtering. Phys. Rev. 184 (1969) 383.</li>
+        <li>Yamamura Y., Tawara H. Energy dependence of ion-induced sputtering yields. At. Data Nucl. Data Tables 62 (1996) 149.</li>
+        <li>Schulz F., Wittmaack K. Computer simulation of collision cascades and profile broadening. Radiat. Eff. 29 (1976) 31.</li>
+        <li>White A.E. et al. Mesotaxy: single-crystal growth of buried CoSi₂ layers. Appl. Phys. Lett. 50 (1987) 95.</li>
+      </ol>
+
+      <h3>Mualliflar</h3>
+      <p>Maxmudov M.A., Isaxanov Z.A. — O'zR FA U.A. Arifov nomidagi Ion-plazma va lazer texnologiyalari instituti, Toshkent, 2026.</p>
+    </div>
+  </section>
+
+  <footer>
+    <span>IonSil v2.0 · © 2026 Maxmudov M.A., Isaxanov Z.A.</span>
+    <span>Hisoblar taxminiy; aniq natijalar uchun tajriba yoki SRIM bilan solishtiring.</span>
+  </footer>
+</div>
+
+<script>
+/* IonSil — ion implantatsiyasi va silitsid sintezi hisob yadrosi
+ * Modellar:
+ *  - Yadroviy to'xtatish: ZBL universal potensiali
+ *  - Elektron to'xtatish: Lindhard–Scharff (LSS), Se = k·E^1/2
+ *  - Proyektiv yugurish yo'li: Rp = R / (1 + M2/(3·M1)),  ΔRp = (2/3)·Rp·√(M1·M2)/(M1+M2)
+ *  - Purkash koeffitsiyenti: Sigmund nazariyasi, α* — Yamamura approksimatsiyasi
+ *  - Purkash bilan cheklangan profil: Schulz–Wittmaack analitik yechimi
+ */
+(function (root) {
+  "use strict";
+  var NA = 6.02214076e23;
+
+  // Ionlar: Z, M (a.m.b.), fazalar [formula, metall atom ulushi], MSi2 zichligi (g/sm³) va molyar massasi
+  var IONS = {
+    Ta: { name: "Tantal",  Z: 73, M: 180.948, di: "TaSi₂", diRho: 9.14, diM: 237.12,
+          phases: [["TaSi₂", 1/3], ["Ta₅Si₃", 0.625], ["Ta₂Si", 2/3], ["Ta₃Si", 0.75]] },
+    Nb: { name: "Niobiy",  Z: 41, M: 92.906,  di: "NbSi₂", diRho: 5.66, diM: 149.08,
+          phases: [["NbSi₂", 1/3], ["Nb₅Si₃", 0.625], ["Nb₃Si", 0.75]] },
+    Cr: { name: "Xrom",    Z: 24, M: 51.996,  di: "CrSi₂", diRho: 4.91, diM: 108.17,
+          phases: [["CrSi₂", 1/3], ["CrSi", 0.5], ["Cr₅Si₃", 0.625], ["Cr₃Si", 0.75]] },
+    Mo: { name: "Molibden", Z: 42, M: 95.95,  di: "MoSi₂", diRho: 6.24, diM: 152.12,
+          phases: [["MoSi₂", 1/3], ["Mo₅Si₃", 0.625], ["Mo₃Si", 0.75]] },
+    W:  { name: "Volfram", Z: 74, M: 183.84,  di: "WSi₂", diRho: 9.3, diM: 240.01,
+          phases: [["WSi₂", 1/3], ["W₅Si₃", 0.625]] },
+    Ti: { name: "Titan",   Z: 22, M: 47.867,  di: "TiSi₂", diRho: 4.02, diM: 104.04,
+          phases: [["TiSi₂", 1/3], ["TiSi", 0.5], ["Ti₅Si₃", 0.625]] },
+    Co: { name: "Kobalt",  Z: 27, M: 58.933,  di: "CoSi₂", diRho: 4.95, diM: 115.10,
+          phases: [["CoSi₂", 1/3], ["CoSi", 0.5], ["Co₂Si", 2/3]] },
+    Ni: { name: "Nikel",   Z: 28, M: 58.693,  di: "NiSi₂", diRho: 4.83, diM: 114.86,
+          phases: [["NiSi₂", 1/3], ["NiSi", 0.5], ["Ni₂Si", 2/3]] },
+    Ar: { name: "Argon",   Z: 18, M: 39.948,  di: null, phases: [] }
+  };
+
+  var SI = { Z: 14, M: 28.0855, rho: 2.329, Us: 4.7 };
+  SI.N = SI.rho * NA / SI.M; // ≈ 4.99e22 at/sm³
+
+  function screen(Z1, Z2) { return Math.pow(Z1, 0.23) + Math.pow(Z2, 0.23); }
+
+  // ZBL universal reduced nuclear stopping
+  function snReduced(eps) {
+    if (eps <= 0) return 0;
+    if (eps <= 30) return Math.log(1 + 1.1383 * eps) / (2 * (eps + 0.01321 * Math.pow(eps, 0.21226) + 0.19593 * Math.sqrt(eps)));
+    return Math.log(eps) / (2 * eps);
+  }
+
+  function reducedEnergy(ion, E_eV, t) {
+    t = t || SI;
+    return 32.53 * t.M * (E_eV / 1000) / (ion.Z * t.Z * (ion.M + t.M) * screen(ion.Z, t.Z));
+  }
+
+  // Yadroviy to'xtatish kesimi, eV·sm²/atom
+  function Sn(ion, E_eV, t) {
+    t = t || SI;
+    var eps = reducedEnergy(ion, E_eV, t);
+    return 8.462e-15 * ion.Z * t.Z * ion.M * snReduced(eps) / ((ion.M + t.M) * screen(ion.Z, t.Z));
+  }
+
+  // Elektron to'xtatish kesimi (LSS), eV·sm²/atom
+  function Se(ion, E_eV, t) {
+    t = t || SI;
+    var k = 1.212e-16 * Math.pow(ion.Z, 7 / 6) * t.Z /
+      (Math.pow(Math.pow(ion.Z, 2 / 3) + Math.pow(t.Z, 2 / 3), 1.5) * Math.sqrt(ion.M));
+    return k * Math.sqrt(E_eV);
+  }
+
+  // To'liq yo'l uzunligi R, sm: R = ∫ dE / (N·(Sn+Se)), logarifmik integrallash
+  function totalRange(ion, E_eV, t) {
+    t = t || SI;
+    var E0 = 1, n = 600, a = Math.log(E0), b = Math.log(E_eV), h = (b - a) / n, s = 0;
+    for (var i = 0; i <= n; i++) {
+      var E = Math.exp(a + i * h);
+      var f = E / (t.N * (Sn(ion, E, t) + Se(ion, E, t)));
+      s += (i === 0 || i === n) ? f / 2 : f;
+    }
+    return s * h;
+  }
+
+  // Rp va ΔRp, sm
+  function ranges(ion, E_keV, t) {
+    t = t || SI;
+    var R = totalRange(ion, E_keV * 1000, t);
+    var Rp = R / (1 + t.M / (3 * ion.M));
+    var dRp = (2 / 3) * Rp * Math.sqrt(ion.M * t.M) / (ion.M + t.M);
+    return { R: R, Rp: Rp, dRp: dRp };
+  }
+
+  // Sigmund purkash koeffitsiyenti (normal tushish), atom/ion
+  function sputterYield(ion, E_keV, t) {
+    t = t || SI;
+    var r = t.M / ion.M, alpha;
+    if (ion.M <= t.M) alpha = 0.249 * Math.pow(r, 0.56) + 0.0035 * Math.pow(r, 1.5);
+    else alpha = 0.0875 * Math.pow(r, -0.15) + 0.165 * r;
+    var SnA2 = Sn(ion, E_keV * 1000, t) * 1e16; // eV·Å²
+    return 0.042 * alpha * SnA2 / t.Us;
+  }
+
+  function erf(x) { // Abramowitz–Stegun 7.1.26, |xato| < 1.5e-7
+    var s = x < 0 ? -1 : 1; x = Math.abs(x);
+    var tt = 1 / (1 + 0.3275911 * x);
+    var y = 1 - (((((1.061405429 * tt - 1.453152027) * tt) + 1.421413741) * tt - 0.284496736) * tt + 0.254829592) * tt * Math.exp(-x * x);
+    return s * y;
+  }
+
+  // Metall atom ulushi f(x): x — joriy sirtdan chuqurlik, sm
+  function fraction(x, Rp, dRp, dose, Y, N) {
+    N = N || SI.N;
+    var s2 = Math.SQRT2 * dRp;
+    if (!(Y > 0) || dose * Y / N < 1e-3 * dRp) {
+      return dose / (N * Math.sqrt(2 * Math.PI) * dRp) * Math.exp(-Math.pow(x - Rp, 2) / (2 * dRp * dRp));
+    }
+    var d = dose * Y / N;
+    return (erf((x + d - Rp) / s2) - erf((x - Rp) / s2)) / (2 * Y);
+  }
+
+  // To'liq profil hisobi
+  function simulate(opts) {
+    var ion = IONS[opts.ion];
+    var E = opts.energy;               // keV
+    var dose = opts.dose;              // ion/sm²
+    var r = ranges(ion, E);
+    var th = (opts.angle || 0) * Math.PI / 180, cth = Math.cos(th);
+    var Rp = opts.RpOverride ? opts.RpOverride * 1e-7 : r.Rp * cth;   // normal proyeksiya
+    var dRp = opts.dRpOverride ? opts.dRpOverride * 1e-7 : r.dRp;
+    var Ycalc = sputterYield(ion, E) * Math.pow(cth, -5 / 3);        // Y(θ) = Y(0)·cos^(-5/3)θ, θ ≤ 60°
+    var Y = opts.sputter ? (opts.Yoverride > 0 ? opts.Yoverride : Ycalc) : 0;
+    var N = SI.N;
+    var xmax = Rp + 5 * dRp, n = 800;
+    var xs = [], fs = [], peak = 0, xPeak = 0, ret = 0, above = 0;
+    var target = opts.targetFraction || 1 / 3;
+    for (var i = 0; i <= n; i++) {
+      var x = xmax * i / n;
+      var f = fraction(x, Rp, dRp, dose, Y, N);
+      xs.push(x * 1e7); fs.push(f);
+      if (f > peak) { peak = f; xPeak = x; }
+      if (f >= target) above++;
+    }
+    var dx = xmax / n;
+    for (i = 0; i <= n; i++) ret += ((i === 0 || i === n) ? 0.5 : 1) * fs[i] * N * dx;
+    var res = {
+      ion: opts.ion, energy: E, dose: dose,
+      R: r.R, Rp: Rp, dRp: dRp, RpCalc: r.Rp, dRpCalc: r.dRp,
+      Ycalc: Ycalc, Y: Y, sputter: !!opts.sputter, angle: opts.angle || 0,
+      x: xs, f: fs, peak: peak, xPeak: xPeak * 1e7,
+      retained: ret, retainedRatio: ret / dose,
+      recession: Y > 0 ? dose * Y / N * 1e7 : 0,
+      fSat: Y > 0 ? 1 / Y : Infinity,
+      peakConc: peak * N,
+      layerAbove: above * dx * 1e7,
+      Sn: Sn(ion, E * 1000), Se: Se(ion, E * 1000)
+    };
+    res.doseNeeded = doseForFraction(opts.ion, E, target, Y, Rp, dRp);
+    res.phase = phaseAnalysis(opts.ion, peak);
+    if (ion.di) {
+      var nM = ion.diRho * NA / ion.diM;           // MSi2 dagi metall atomlar zichligi
+      res.eqThickness = ret / nM * 1e7;            // nm
+      res.siConsumed = 2 * ret / SI.N * 1e7;       // nm, 2 Si atom / 1 M
+    }
+    return res;
+  }
+
+  function peakFraction(Rp, dRp, dose, Y) {
+    if (!(Y > 0)) return dose / (SI.N * Math.sqrt(2 * Math.PI) * dRp);
+    var best = 0, xmax = Rp + 5 * dRp;
+    for (var i = 0; i <= 400; i++) { var f = fraction(xmax * i / 400, Rp, dRp, dose, Y); if (f > best) best = f; }
+    return best;
+  }
+
+  // Cho'qqida berilgan ulushga erishish uchun kerakli doza (purkashni hisobga olib)
+  function doseForFraction(ionKey, E, target, Y, Rp, dRp) {
+    if (Rp === undefined) { var r = ranges(IONS[ionKey], E); Rp = r.Rp; dRp = r.dRp; }
+    if (!(Y > 0)) return target * SI.N * Math.sqrt(2 * Math.PI) * dRp;
+    if (target >= 1 / Y * 0.999) return Infinity;
+    var lo = Math.log(1e12), hi = Math.log(1e20);
+    for (var k = 0; k < 60; k++) {
+      var mid = (lo + hi) / 2;
+      if (peakFraction(Rp, dRp, Math.exp(mid), Y) < target) lo = mid; else hi = mid;
+    }
+    return Math.exp((lo + hi) / 2);
+  }
+
+  function phaseAnalysis(ionKey, f) {
+    var ion = IONS[ionKey];
+    if (!ion.di) return { level: "info", text: "Inert ion (Ar⁺): silitsid hosil qilmaydi. Qatlamlarni ion bilan aralashtirish va amorflashtirish uchun ishlatiladi." };
+    var pct = (f * 100).toFixed(1).replace(".", ",");
+    if (f < 0.05) return { level: "low", text: "Cho'qqidagi ulush " + pct + " at.%: suyultirilgan tarkib. Termik ishlovdan keyingi holat (masalan, " + ion.di + " pretsipitatlari) qo'shimcha tekshiruvni talab qiladi." };
+    if (f < 0.30) return { level: "mid", text: "Cho'qqidagi ulush " + pct + " at.%: tarkib " + ion.di + " stexiometriyasidan (33,3 at.%) past. Uzluksiz qatlam uchun zarur tarkibga erishilmaydi; termik ishlovdan keyingi faza qo'shimcha tekshiruvni talab qiladi." };
+    if (f <= 0.37) return { level: "ok", text: "Cho'qqidagi ulush " + pct + " at.%: tarkib " + ion.di + " stexiometriyasiga yaqin. Bu faza hosil bo'lganini isbotlamaydi; termik ishlovdan keyingi fazani XRD yoki TEM/SAED bilan tasdiqlash kerak." };
+    var richer = ion.phases.filter(function (p) { return p[1] > 1 / 3 && p[1] <= f + 0.05; }).map(function (p) { return p[0]; });
+    return { level: "high", text: "Cho'qqidagi ulush " + pct + " at.%: " + ion.di + " stexiometriyasidan yuqori, markazda metallga boy tarkib zonasi (" + (richer.join(", ") || "metall") + " tarkibiga mos). Faza tarkibi qo'shimcha tekshiruvni talab qiladi; dozani kamaytirish mumkin." };
+  }
+
+  // Berilgan Rp ga mos energiyani topish (ko'p komponentli profillarni ustma-ust tushirish uchun)
+  function energyForRp(ionKey, RpTarget_cm) {
+    var ion = IONS[ionKey], lo = Math.log(0.05), hi = Math.log(5000);
+    if (ranges(ion, 5000).Rp < RpTarget_cm) return NaN;
+    for (var k = 0; k < 50; k++) {
+      var mid = (lo + hi) / 2;
+      if (ranges(ion, Math.exp(mid)).Rp < RpTarget_cm) lo = mid; else hi = mid;
+    }
+    return Math.exp((lo + hi) / 2);
+  }
+
+  var api = { IONS: IONS, SI: SI, Sn: Sn, Se: Se, ranges: ranges, sputterYield: sputterYield,
+    fraction: fraction, simulate: simulate, doseForFraction: doseForFraction,
+    phaseAnalysis: phaseAnalysis, energyForRp: energyForRp, peakFraction: peakFraction, erf: erf };
+  if (typeof module !== "undefined" && module.exports) module.exports = api; else root.IonSil = api;
+})(this);
+
+/* IonSil v2 — kengaytirilgan hisob modullari
+ *  - numericImplant: ketma-ket / ko'p komponentli implantatsiya, sirt chekinishi va atomlar balansi bilan (sonli)
+ *  - diffuse: termik ishlov, Arrhenius + Fikning 2-qonuni (Crank–Nicolson), eruvchanlik chegarasi bilan
+ *  - monteCarlo: kirish parametrlari noaniqligining natijaga ta'siri
+ *  - optimize: to'r bo'yicha qidiruv, eng yaxshi rejimlar
+ *  - metrics: MAE, RMSE, bias, nisbiy xato
+ *  - zones: chuqurlik bo'yicha tarkibiy moslik zonalari
+ * Birliklar (ichki): uzunlik — sm, energiya — keV (ion), eV (aktivatsiya), doza — sm⁻², D — sm²/s, vaqt — s.
+ */
+(function (root) {
+  "use strict";
+  var P = (typeof module !== "undefined" && module.exports) ? require("./physics.js") : root.IonSil;
+  var KB = 8.617333262e-5; // eV/K
+  var N = P.SI.N;
+
+  // Tushish burchagi: Rp ning normal proyeksiyasi va Y(θ) = Y(0)·cos^(-5/3)θ (Sigmund/Yamamura, θ ≤ 60°)
+  function angleFactors(thetaDeg) {
+    var c = Math.cos((thetaDeg || 0) * Math.PI / 180);
+    return { rp: c, y: Math.pow(c, -5 / 3), valid: (thetaDeg || 0) <= 60 };
+  }
+
+  function stageParams(st) {
+    var ion = P.IONS[st.ion], r = P.ranges(ion, st.energy), a = angleFactors(st.angle);
+    var Rp = st.RpOverride ? st.RpOverride * 1e-7 : r.Rp * a.rp;
+    var dRp = st.dRpOverride ? st.dRpOverride * 1e-7 : r.dRp;
+    var Y0 = st.Yoverride > 0 ? st.Yoverride : P.sputterYield(ion, st.energy);
+    return { Rp: Rp, dRp: dRp, Y: st.sputter === false ? 0 : Y0 * (st.Yoverride > 0 ? 1 : a.y), angleValid: a.valid };
+  }
+
+  // Sonli implantatsiya. z — boshlang'ich sirtdan chuqurlik (sm). Har bir tur uchun ulush massivi.
+  function numericImplant(stages, opts) {
+    opts = opts || {};
+    var pars = stages.map(stageParams);
+    var totY = 0, zmax = 0;
+    stages.forEach(function (st, i) { totY += st.dose * pars[i].Y / N; zmax = Math.max(zmax, pars[i].Rp + 6 * pars[i].dRp); });
+    zmax += totY;
+    var dz = opts.dz || Math.max(0.1e-7, zmax / 1500), nz = Math.ceil(zmax / dz) + 1;
+    var species = [];
+    stages.forEach(function (st) { if (species.indexOf(st.ion) < 0) species.push(st.ion); });
+    var C = {}; species.forEach(function (s) { C[s] = new Float64Array(nz); });
+    var sput = {}, impl = {}; species.forEach(function (s) { sput[s] = 0; impl[s] = 0; });
+    var zs = 0, overfull = false, stageReports = [];
+    var erf = P.erf;
+    stages.forEach(function (st, si) {
+      var p = pars[si], nsteps = opts.steps || 300, dphi = st.dose / nsteps, s2 = Math.SQRT2 * p.dRp;
+      for (var k = 0; k < nsteps; k++) {
+        // purkash: sirt d = Y·dφ/N ga chekinadi, olib tashlangan qatlamdagi atomlar purkaladi
+        var dzs = p.Y * dphi / N, zNew = zs + dzs;
+        if (dzs > 0) {
+          var i0 = Math.floor(zs / dz), i1 = Math.floor(zNew / dz);
+          for (var i = i0; i <= Math.min(i1, nz - 1); i++) {
+            var a = Math.max(zs, i * dz), b = Math.min(zNew, (i + 1) * dz), w = Math.max(0, b - a) / dz;
+            if (w <= 0) continue;
+            species.forEach(function (s) { var rm = C[s][i] * w; sput[s] += rm * N * dz; C[s][i] -= rm; });
+          }
+          zs = zNew;
+        }
+        // implantatsiya: Gauss taqsimoti joriy sirtdan Rp chuqurlikda, katak bo'yicha integrallangan
+        var c0 = zs + p.Rp;
+        var iA = Math.max(0, Math.floor((c0 - 6 * p.dRp) / dz)), iB = Math.min(nz - 1, Math.ceil((c0 + 6 * p.dRp) / dz));
+        for (var j = iA; j <= iB; j++) {
+          var lo = Math.max(j * dz, zs), hi = (j + 1) * dz;
+          if (hi <= lo) continue;
+          var frac = 0.5 * (erf((hi - c0) / s2) - erf((lo - c0) / s2));
+          C[st.ion][j] += dphi * frac / (N * dz);
+        }
+        // sirtdan tashqariga tushgan qism (x < 0) — qaytgan ionlar, hisobga olinadi
+        impl[st.ion] += dphi;
+      }
+      stageReports.push({ stage: si + 1, ion: st.ion, energy: st.energy, dose: st.dose, angle: st.angle || 0, Rp: p.Rp, dRp: p.dRp, Y: p.Y, recessionAfter: zs, angleValid: p.angleValid });
+    });
+    // natija joriy sirtdan
+    var i0s = Math.floor(zs / dz), x = [], f = {}, sum = [];
+    species.forEach(function (s) { f[s] = []; });
+    for (var i = i0s; i < nz; i++) {
+      x.push((i * dz - zs + dz / 2) * 1e7);
+      var tot = 0;
+      species.forEach(function (s) { f[s].push(C[s][i]); tot += C[s][i]; });
+      sum.push(tot); if (tot > 1) overfull = true;
+    }
+    var balance = species.map(function (s) {
+      var ret = 0; for (var i = i0s; i < nz; i++) ret += C[s][i] * N * dz;
+      var lost = impl[s] - ret - sput[s]; // qaytgan (backscatter) yoki diskretizatsiya xatosi
+      return { ion: s, implanted: impl[s], retained: ret, sputtered: sput[s], other: lost, closure: Math.abs(lost) / impl[s] };
+    });
+    return { x: x, f: f, sum: sum, species: species, recession: zs * 1e7, dz: dz * 1e7, balance: balance, stages: stageReports, overfull: overfull };
+  }
+
+  // Tridiagonal (Thomas) yechuvchi
+  function thomas(a, b, c, d) {
+    var n = d.length, cp = new Float64Array(n), dp = new Float64Array(n), x = new Float64Array(n);
+    cp[0] = c[0] / b[0]; dp[0] = d[0] / b[0];
+    for (var i = 1; i < n; i++) { var m = b[i] - a[i] * cp[i - 1]; cp[i] = c[i] / m; dp[i] = (d[i] - a[i] * dp[i - 1]) / m; }
+    x[n - 1] = dp[n - 1];
+    for (i = n - 2; i >= 0; i--) x[i] = dp[i] - cp[i] * x[i + 1];
+    return x;
+  }
+
+  function arrhenius(D0, Ea, T_K) { return D0 * Math.exp(-Ea / (KB * T_K)); }
+
+  // Termik ishlov. prof: {x (nm), f (ulush)}; steps: [{T (°C), t (s)}]; D0 (sm²/s), Ea (eV);
+  // Cs: eruvchanlik (atom ulushi), undan ortiq qism harakatsiz (pretsipitat); surface: "reflect" | "sink"
+  function diffuse(prof, o) {
+    var steps = o.steps, Cs = o.Cs > 0 ? o.Cs : Infinity;
+    var dx0 = (prof.x[1] - prof.x[0]) * 1e-7;
+    var Ls = steps.map(function (s) { return Math.sqrt(arrhenius(o.D0, o.Ea, s.T + 273.15) * s.t); });
+    var Ltot = Math.sqrt(Ls.reduce(function (a, l) { return a + l * l; }, 0));
+    var xEnd = prof.x[prof.x.length - 1] * 1e-7;
+    var Lneed = xEnd + 8 * Ltot + 20e-7, L = Math.min(Lneed, o.maxDepth || 50e-4); // 500 mkm gacha
+    // eruvchanlik chegarasi bilan profil asosan harakatsiz: profilni aniq yechish uchun soha profil atrofida cheklanadi
+    if (isFinite(Cs)) L = Math.min(L, Math.max(10 * xEnd, 1e-4));
+    var nx = Math.min(o.nx || 1200, 6000), dx = L / (nx - 1);
+    var C = new Float64Array(nx), i;
+    // atomlar soni saqlanadigan qilib kataklarga taqsimlash (chegaraviy kataklar yarim kenglikda)
+    var Qsrc = 0;
+    // manba katagi [x − dx0/2, x + dx0/2] ∩ [0, ∞) panjara kataklariga kesishish uzunligi bo'yicha taqsimlanadi
+    for (i = 0; i < prof.x.length; i++) {
+      var xc = prof.x[i] * 1e-7, sa = Math.max(0, xc - dx0 / 2), sb = xc + dx0 / 2, amt = prof.f[i] * (sb - sa); Qsrc += amt;
+      if (amt <= 0) continue;
+      var ja = Math.max(0, Math.floor(sa / dx + 0.5)), jb = Math.min(nx - 1, Math.floor(sb / dx + 0.5));
+      for (var jj = ja; jj <= jb; jj++) {
+        var ca = Math.max(0, (jj - 0.5) * dx), cb = jj === nx - 1 ? (jj) * dx : (jj + 0.5) * dx;
+        var ov = Math.min(sb, cb) - Math.max(sa, ca);
+        if (ov > 0) C[jj] += prof.f[i] * ov / (cb - ca);
+      }
+    }
+    Qsrc *= N;
+    var integ = function (arr) { var s = 0; for (var q = 0; q < nx; q++) s += arr[q] * ((q === 0 || q === nx - 1) ? 0.5 : 1); return s * dx * N; };
+    var initial = Array.from(C), Q0 = integ(C), history = [];
+    steps.forEach(function (s) {
+      var D = arrhenius(o.D0, o.Ea, s.T + 273.15), nt = Math.max(20, Math.min(o.nt || 400, 4000)), dt = s.t / nt, r = D * dt / (dx * dx);
+      // θ-sxema: r ≤ 0.5 da Crank–Nicolson (θ = 0.5), aks holda to'liq yashirin (θ = 1) — tebranishsiz, massani saqlaydi
+      var th = r > 0.5 ? 1 : 0.5;
+      var a = new Float64Array(nx), b = new Float64Array(nx), c = new Float64Array(nx);
+      for (var j = 0; j < nx; j++) { a[j] = -th * r; b[j] = 1 + 2 * th * r; c[j] = -th * r; }
+      // chegaralar: chuqurda — oqim yo'q (ko'zgu); sirtda — oqim yo'q (reflect) yoki C = 0 (sink)
+      if (o.surface === "sink") { b[0] = 1; c[0] = 0; } else { c[0] = -2 * th * r; }
+      a[nx - 1] = -2 * th * r;
+      for (var n = 0; n < nt; n++) {
+        var mob = new Float64Array(nx), pre = new Float64Array(nx);
+        for (j = 0; j < nx; j++) { mob[j] = Math.min(C[j], Cs); pre[j] = C[j] - mob[j]; }
+        var d = new Float64Array(nx);
+        for (j = 0; j < nx; j++) {
+          var left = j > 0 ? mob[j - 1] : mob[1], right = j < nx - 1 ? mob[j + 1] : mob[nx - 2];
+          d[j] = mob[j] + (1 - th) * r * (left - 2 * mob[j] + right);
+        }
+        if (o.surface === "sink") d[0] = 0;
+        var m2 = thomas(a, b, c, d);
+        for (j = 0; j < nx; j++) C[j] = m2[j] + pre[j];
+      }
+      history.push({ theta: th, T: s.T, t: s.t, D: D, L: Math.sqrt(D * s.t) * 1e7, r: r });
+    });
+    var Q1 = integ(C);
+    var xs = [], fi = [], ff = [];
+    var stride = Math.max(1, Math.floor(nx / 800));
+    for (i = 0; i < nx; i += stride) { xs.push(i * dx * 1e7); fi.push(initial[i]); ff.push(C[i]); }
+    function shape(arr) {
+      var pk = 0, ip = 0; for (var q = 0; q < arr.length; q++) if (arr[q] > pk) { pk = arr[q]; ip = q; }
+      var half = pk / 2, l = ip, r2 = ip; while (l > 0 && arr[l] > half) l--; while (r2 < arr.length - 1 && arr[r2] > half) r2++;
+      // yarim balandlik nuqtalarini chiziqli interpolyatsiya qilish
+      var lf = (arr[l] < half && arr[l + 1] !== arr[l]) ? l + (half - arr[l]) / (arr[l + 1] - arr[l]) : l;
+      var rf = (arr[r2] < half && arr[r2 - 1] !== arr[r2]) ? r2 - (half - arr[r2]) / (arr[r2 - 1] - arr[r2]) : r2;
+      var m0 = 0, m1 = 0; for (q = 0; q < arr.length; q++) { m0 += arr[q]; m1 += arr[q] * q; }
+      var x99 = 0, cum = 0; for (q = 0; q < arr.length; q++) { cum += arr[q]; if (cum >= 0.99 * m0) { x99 = q; break; } }
+      return { peak: pk, xPeak: ip * dx * 1e7, fwhm: (rf - lf) * dx * 1e7, centroid: m1 / m0 * dx * 1e7, depth99: x99 * dx * 1e7 };
+    }
+    return { Qsrc: Qsrc, x: xs, initial: fi, final: ff, before: shape(initial), after: shape(Array.from(C)), Q0: Q0, Q1: Q1, balanceErr: (Q0 - Q1) / Q0,
+      history: history, Ltot: Ltot * 1e7, domain: L * 1e7, nx: nx, dx: dx * 1e7, truncated: L < Lneed - 1e-9, limitedBySolubility: isFinite(Cs) && L < Lneed - 1e-9 };
+  }
+
+  // Konvergentsiya: panjara va vaqt qadamini ikki baravar kamaytirib solishtirish
+  function diffuseConvergence(prof, o) {
+    var a = diffuse(prof, Object.assign({}, o, { nx: 600, nt: 200 }));
+    var b = diffuse(prof, Object.assign({}, o, { nx: 1200, nt: 400 }));
+    var c = diffuse(prof, Object.assign({}, o, { nx: 2400, nt: 800 }));
+    var rel = function (p, q) { return Math.abs(p - q) / Math.max(Math.abs(q), 1e-30); };
+    return { coarse: a.after, mid: b.after, fine: c.after,
+      dPeak: [rel(a.after.peak, c.after.peak), rel(b.after.peak, c.after.peak)],
+      dFwhm: [rel(a.after.fwhm, c.after.fwhm), rel(b.after.fwhm, c.after.fwhm)] };
+  }
+
+  // Analitik tekshiruv: cheksiz muhitda Gauss profili σ² → ΔRp² + 2Dt
+  function analyticGaussTest() {
+    var Rp = 500e-7, dRp = 50e-7, dose = 1e15, x = [], f = [];
+    for (var i = 0; i <= 2000; i++) { var xx = i * 0.5e-7; x.push(xx * 1e7); f.push(dose / (N * Math.sqrt(2 * Math.PI) * dRp) * Math.exp(-Math.pow(xx - Rp, 2) / (2 * dRp * dRp))); }
+    var D0 = 1e-3, Ea = 2.7, T = 1000, t = 600, D = arrhenius(D0, Ea, T + 273.15);
+    var res = diffuse({ x: x, f: f }, { steps: [{ T: T, t: t }], D0: D0, Ea: Ea, nx: 2000, nt: 800, surface: "reflect" });
+    var sig = Math.sqrt(dRp * dRp + 2 * D * t), peakA = dose / (N * Math.sqrt(2 * Math.PI) * sig), fwhmA = 2.3548 * sig * 1e7;
+    return { D: D, sigma_nm: sig * 1e7, peakAnalytic: peakA, peakNumeric: res.after.peak, fwhmAnalytic: fwhmA, fwhmNumeric: res.after.fwhm,
+      errPeak: (res.after.peak - peakA) / peakA, errFwhm: (res.after.fwhm - fwhmA) / fwhmA, balanceErr: res.balanceErr };
+  }
+
+  // Tasodifiy sonlar (takrorlanuvchi): mulberry32 + Box–Muller
+  function rng(seed) {
+    var s = seed >>> 0;
+    var u = function () { s += 0x6D2B79F5; var t = s; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    return { u: u, n: function () { var a = Math.max(u(), 1e-12), b = u(); return Math.sqrt(-2 * Math.log(a)) * Math.cos(2 * Math.PI * b); } };
+  }
+
+  function quantile(arr, q) { var s = arr.slice().sort(function (a, b) { return a - b; }); var p = (s.length - 1) * q, i = Math.floor(p); return s[i] + (s[Math.min(i + 1, s.length - 1)] - s[i]) * (p - i); }
+
+  // Bitta hisob (analitik), doseNeeded siz — tez
+  function evalCase(ion, E, dose, Rp, dRp, Y) {
+    var xmax = Rp + 5 * dRp, n = 300, best = 0, xpk = 0, ret = 0, m0 = 0, m1 = 0, dx = xmax / n, xs = [], fs = [];
+    for (var i = 0; i <= n; i++) {
+      var x = i * dx, f = P.fraction(x, Rp, dRp, dose, Y); xs.push(x * 1e7); fs.push(f);
+      if (f > best) { best = f; xpk = x; }
+      var w = (i === 0 || i === n) ? 0.5 : 1; ret += w * f * N * dx; m0 += w * f; m1 += w * f * x;
+    }
+    var io = P.IONS[ion], eqT = io.di ? ret / (io.diRho * 6.02214076e23 / io.diM) * 1e7 : NaN;
+    return { x: xs, f: fs, peak: best, xPeak: xpk * 1e7, retained: ret, eqThickness: eqT, centroid: m0 ? m1 / m0 * 1e7 : 0, recession: Y > 0 ? dose * Y / N * 1e7 : 0 };
+  }
+
+  // Monte-Carlo noaniqlik tahlili. u — nisbiy standart chetlanishlar: {Rp, dRp, Y, dose}
+  function monteCarlo(base, u, n, seed) {
+    var ion = P.IONS[base.ion], r = P.ranges(ion, base.energy), a = angleFactors(base.angle);
+    var Rp0 = base.RpOverride ? base.RpOverride * 1e-7 : r.Rp * a.rp, dRp0 = base.dRpOverride ? base.dRpOverride * 1e-7 : r.dRp;
+    var Y0 = base.sputter === false ? 0 : (base.Yoverride > 0 ? base.Yoverride : P.sputterYield(ion, base.energy) * a.y);
+    var g = rng(seed || 12345), xmax = (Rp0 + 5 * dRp0) * (1 + 3 * (u.Rp || 0)), grid = [], ng = 200;
+    for (var i = 0; i <= ng; i++) grid.push(xmax * i / ng);
+    var prof = grid.map(function () { return []; }), peaks = [], thick = [], cents = [], fsat = [];
+    var pos = function (v) { return Math.max(v, 1e-12); };
+    for (var k = 0; k < n; k++) {
+      var Rp = pos(Rp0 * (1 + (u.Rp || 0) * g.n())), dRp = pos(dRp0 * (1 + (u.dRp || 0) * g.n()));
+      var Y = Y0 > 0 ? pos(Y0 * (1 + (u.Y || 0) * g.n())) : 0, dose = pos(base.dose * (1 + (u.dose || 0) * g.n()));
+      var e = evalCase(base.ion, base.energy, dose, Rp, dRp, Y);
+      grid.forEach(function (x, j) { prof[j].push(P.fraction(x, Rp, dRp, dose, Y)); });
+      peaks.push(e.peak); thick.push(e.eqThickness); cents.push(e.centroid); fsat.push(Y > 0 ? 1 / Y : NaN);
+    }
+    var band = { x: grid.map(function (v) { return v * 1e7; }), p05: prof.map(function (a) { return quantile(a, 0.05); }), p50: prof.map(function (a) { return quantile(a, 0.5); }), p95: prof.map(function (a) { return quantile(a, 0.95); }) };
+    var sum = function (arr) { var f = arr.filter(isFinite); return f.length ? { p05: quantile(f, 0.05), p50: quantile(f, 0.5), p95: quantile(f, 0.95) } : null; };
+    // sezgirlik: har bir parametrni +1σ ga o'zgartirib (qolganlari nominal)
+    var nominal = evalCase(base.ion, base.energy, base.dose, Rp0, dRp0, Y0);
+    var sens = ["Rp", "dRp", "Y", "dose"].filter(function (k) { return (u[k] || 0) > 0 && !(k === "Y" && !(Y0 > 0)); }).map(function (k) {
+      var Rp = Rp0, dRp = dRp0, Y = Y0, dose = base.dose;
+      if (k === "Rp") Rp *= 1 + u.Rp; if (k === "dRp") dRp *= 1 + u.dRp; if (k === "Y") Y *= 1 + u.Y; if (k === "dose") dose *= 1 + u.dose;
+      var e = evalCase(base.ion, base.energy, dose, Rp, dRp, Y);
+      return { param: k, u: u[k], dPeak: (e.peak - nominal.peak) / nominal.peak, dThick: (e.eqThickness - nominal.eqThickness) / nominal.eqThickness, dCent: (e.centroid - nominal.centroid) / nominal.centroid };
+    }).sort(function (a, b) { return Math.abs(b.dPeak) + Math.abs(b.dThick) - Math.abs(a.dPeak) - Math.abs(a.dThick); });
+    return { n: n, seed: seed, band: band, peak: sum(peaks), thickness: sum(thick), centroid: sum(cents), fsat: sum(fsat), nominal: nominal, sensitivity: sens,
+      inputs: { Rp: Rp0 * 1e7, dRp: dRp0 * 1e7, Y: Y0, dose: base.dose } };
+  }
+
+  // Optimizator: to'r bo'yicha qidiruv
+  function optimize(t) {
+    var ion = P.IONS[t.ion], res = [];
+    var nE = 36, nD = 36, Emin = t.Emin || 5, Emax = t.Emax || 200, Dmin = t.Dmin || 1e15, Dmax = t.Dmax || 2e18;
+    var lo = t.fMin || 0.30, hi = t.fMax || 0.37;
+    for (var i = 0; i < nE; i++) {
+      var E = Emin * Math.pow(Emax / Emin, i / (nE - 1)), r = P.ranges(ion, E), a = angleFactors(t.angle);
+      var Rp = r.Rp * a.rp, dRp = r.dRp, Y = P.sputterYield(ion, E) * a.y;
+      for (var j = 0; j < nD; j++) {
+        var dose = Dmin * Math.pow(Dmax / Dmin, j / (nD - 1)), e = evalCase(t.ion, E, dose, Rp, dRp, Y);
+        var ok = e.recession <= (t.maxRecession || Infinity);
+        var penF = e.peak < lo ? (lo - e.peak) / lo : e.peak > hi ? (e.peak - hi) / hi : 0;
+        var score = Math.abs(e.centroid - t.depth) / t.depth + Math.abs(e.eqThickness - t.thick) / t.thick + 3 * penF + (ok ? 0 : 10);
+        res.push({ E: E, dose: dose, Rp: Rp * 1e7, dRp: dRp * 1e7, Y: Y, fsat: 1 / Y, peak: e.peak, centroid: e.centroid, eqThickness: e.eqThickness, recession: e.recession, retainedRatio: e.retained / dose, score: score, feasible: ok && penF === 0, okRecession: ok });
+      }
+    }
+    res.sort(function (a, b) { return a.score - b.score; });
+    var top = [];
+    for (var k = 0; k < res.length && top.length < (t.n || 5); k++) {
+      var c = res[k];
+      if (top.every(function (q) { return Math.abs(Math.log(q.E / c.E)) > 0.08 || Math.abs(Math.log(q.dose / c.dose)) > 0.25; })) top.push(c);
+    }
+    // to'liq simulyatsiya bilan qayta tekshirish
+    top.forEach(function (c) {
+      var full = P.simulate({ ion: t.ion, energy: c.E, dose: c.dose, sputter: true, targetFraction: 1 / 3, Yoverride: c.Y, RpOverride: c.Rp, dRpOverride: c.dRp });
+      c.check = { peak: full.peak, eqThickness: full.eqThickness, dPeak: Math.abs(full.peak - c.peak) / c.peak };
+    });
+    return { top: top, evaluated: res.length, anyFeasible: res.some(function (q) { return q.feasible; }), maxFsat: Math.max.apply(null, res.map(function (q) { return q.fsat; })) };
+  }
+
+  function metrics(model, ref) {
+    var n = 0, sa = 0, s2 = 0, sb = 0, rel = [];
+    for (var i = 0; i < model.length; i++) {
+      if (!isFinite(model[i]) || !isFinite(ref[i])) continue;
+      var d = model[i] - ref[i]; n++; sa += Math.abs(d); s2 += d * d; sb += d; rel.push(ref[i] !== 0 ? d / ref[i] : NaN);
+    }
+    return { n: n, MAE: sa / n, RMSE: Math.sqrt(s2 / n), bias: sb / n, rel: rel, meanAbsRel: rel.filter(isFinite).reduce(function (a, v) { return a + Math.abs(v); }, 0) / Math.max(1, rel.filter(isFinite).length) };
+  }
+
+  // Chuqurlik bo'yicha tarkibiy moslik zonalari
+  function zones(x, f, ionKey) {
+    var ph = (P.IONS[ionKey].phases || []).slice().sort(function (a, b) { return a[1] - b[1]; });
+    function cls(v) {
+      if (v < 0.05) return { key: "dilute", label: "suyultirilgan (< 5 at.%)" };
+      if (!ph.length) return { key: "mix", label: "aralash qatlam" };
+      if (v < ph[0][1] - 0.035) return { key: "below", label: ph[0][0] + " dan kam metall" };
+      for (var i = 0; i < ph.length; i++) {
+        if (Math.abs(v - ph[i][1]) <= 0.035) return { key: "p" + i, label: ph[i][0] + " tarkibiga yaqin" };
+        if (i < ph.length - 1 && v < ph[i + 1][1] - 0.035) return { key: "b" + i, label: ph[i][0] + " va " + ph[i + 1][0] + " oralig'i" };
+      }
+      return { key: "rich", label: "metallga boy (" + ph[ph.length - 1][0] + " dan yuqori)" };
+    }
+    var out = [], cur = null;
+    for (var i = 0; i < x.length; i++) {
+      var c = cls(f[i]);
+      if (!cur || cur.key !== c.key) { if (cur) out.push(cur); cur = { key: c.key, label: c.label, from: x[i], to: x[i] }; } else cur.to = x[i];
+    }
+    if (cur) out.push(cur);
+    return out.filter(function (z) { return z.to - z.from > 0.2 && z.key !== "dilute"; });
+  }
+
+  var PRESETS = {
+    Cr: { D0: 2.6e-3, Ea: 0.81, range: "20–1050 °C", src: "Zhu J., Barbier D. High and low temperature measurements of the chromium diffusivity in silicon // MRS Proc. 1989. Vol. 163. P. 567. doi:10.1557/PROC-163-567", note: "Erigan (interstitsial) Cr uchun" }
+  };
+
+  var api = { angleFactors: angleFactors, numericImplant: numericImplant, diffuse: diffuse, diffuseConvergence: diffuseConvergence, analyticGaussTest: analyticGaussTest,
+    arrhenius: arrhenius, monteCarlo: monteCarlo, optimize: optimize, metrics: metrics, zones: zones, evalCase: evalCase, PRESETS: PRESETS, KB: KB };
+  if (typeof module !== "undefined" && module.exports) module.exports = api; else root.IonSil2 = api;
+})(this);
+
+</script>
+<script>
+(function () {
+  "use strict";
+  var P = window.IonSil, IONS = P.IONS;
+  var MAIN = ["Ta", "Nb", "Cr", "Ar"], EXTRA = ["Mo", "W", "Ti", "Co", "Ni"];
+  var $ = function (id) { return document.getElementById(id); };
+  var css = function (v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); };
+  var SUP = { "-": "⁻", "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" };
+  function sup(n) { return String(n).split("").map(function (c) { return SUP[c] || c; }).join(""); }
+  function sci(v, d) {
+    if (!isFinite(v)) return "—";
+    if (v === 0) return "0";
+    var e = Math.floor(Math.log10(Math.abs(v))), m = v / Math.pow(10, e);
+    if (+m.toFixed(d === undefined ? 1 : d) >= 10) { m /= 10; e += 1; }
+    return m.toFixed(d === undefined ? 1 : d).replace(".", ",") + "·10" + sup(e);
+  }
+  function fx(v, d) { return isFinite(v) ? v.toFixed(d).replace(".", ",") : "—"; }
+  function parseDose(s) { s = String(s).trim().replace(",", ".").replace(/[×x·]\s*10\^?/i, "e"); var v = parseFloat(s); return isFinite(v) && v > 0 ? v : NaN; }
+  var inFrame = (function () { try { return window.self !== window.top; } catch (e) { return true; } })();
+  if (inFrame) document.querySelectorAll(".dl").forEach(function (b) { b.hidden = true; });
+
+  // ---------- Grafik chizish ----------
+  function niceStep(span, n) {
+    var raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), r = raw / mag;
+    return (r < 1.5 ? 1 : r < 3 ? 2 : r < 7 ? 5 : 10) * mag;
+  }
+  function Chart(canvas, readout) {
+    this.c = canvas; this.ro = readout; this.cfg = null; var self = this;
+    canvas.addEventListener("mousemove", function (e) { self.hover(e); });
+    canvas.addEventListener("mouseleave", function () { self.ro.hidden = true; self.draw(); });
+    if (window.ResizeObserver) new ResizeObserver(function () { self.draw(); }).observe(canvas.parentNode);
+  }
+  Chart.prototype.set = function (cfg) { this.cfg = cfg; this.draw(); };
+  Chart.prototype.draw = function (hx) {
+    var cfg = this.cfg; if (!cfg) return;
+    var c = this.c, dpr = window.devicePixelRatio || 1, W = c.clientWidth, H = c.clientHeight;
+    if (!W || !H) return;
+    c.width = W * dpr; c.height = H * dpr;
+    var g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+    var ink = css("--ink"), muted = css("--muted"), grid = css("--grid"), line = css("--line");
+    var mono = '12px "IBM Plex Mono", Consolas, monospace';
+    var L = cfg.yLog ? 66 : 56, R = 16, T = 14, B = 44;
+    var pw = W - L - R, ph = H - T - B; this.box = { L: L, T: T, pw: pw, ph: ph };
+    var x0 = cfg.xMin, x1 = cfg.xMax, y0 = cfg.yMin, y1 = cfg.yMax;
+    var ly = function (v) { return cfg.yLog ? Math.log10(v) : v; };
+    var X = function (v) { return L + (v - x0) / (x1 - x0) * pw; };
+    var Y = function (v) { return T + ph - (ly(v) - ly(y0)) / (ly(y1) - ly(y0)) * ph; };
+    this.X = X; this.Xinv = function (px) { return x0 + (px - L) / pw * (x1 - x0); };
+    g.font = mono; g.lineWidth = 1;
+    // to'r va belgilar
+    var xs = niceStep(x1 - x0, Math.max(3, Math.floor(pw / 90)));
+    g.fillStyle = muted; g.textAlign = "center"; g.textBaseline = "top";
+    for (var v = Math.ceil(x0 / xs) * xs; v <= x1 + 1e-9; v += xs) {
+      var px = Math.round(X(v)) + 0.5; g.strokeStyle = grid; g.beginPath(); g.moveTo(px, T); g.lineTo(px, T + ph); g.stroke();
+      g.fillText(+v.toFixed(6) + "", px, T + ph + 6);
+    }
+    g.textAlign = "right"; g.textBaseline = "middle";
+    if (cfg.yLog) {
+      for (var e = Math.ceil(Math.log10(y0)); e <= Math.floor(Math.log10(y1)); e++) {
+        var py = Math.round(Y(Math.pow(10, e))) + 0.5; g.strokeStyle = grid; g.beginPath(); g.moveTo(L, py); g.lineTo(L + pw, py); g.stroke();
+        g.fillText("10" + sup(e), L - 6, py);
+      }
+    } else {
+      var ys = niceStep(y1 - y0, Math.max(3, Math.floor(ph / 60)));
+      for (v = Math.ceil(y0 / ys) * ys; v <= y1 + 1e-9; v += ys) {
+        var py2 = Math.round(Y(v)) + 0.5; g.strokeStyle = grid; g.beginPath(); g.moveTo(L, py2); g.lineTo(L + pw, py2); g.stroke();
+        g.fillText(+v.toFixed(6) + "", L - 6, py2);
+      }
+    }
+    g.strokeStyle = line; g.strokeRect(L + 0.5, T + 0.5, pw, ph);
+    // o'q nomlari
+    g.fillStyle = muted; g.textAlign = "center"; g.textBaseline = "bottom"; g.font = '12px "IBM Plex Sans", "Segoe UI", sans-serif';
+    g.fillText(cfg.xLabel, L + pw / 2, H - 4);
+    g.save(); g.translate(13, T + ph / 2); g.rotate(-Math.PI / 2); g.textBaseline = "middle"; g.fillText(cfg.yLabel, 0, 0); g.restore();
+    g.save(); g.beginPath(); g.rect(L, T, pw, ph); g.clip();
+    // gorizontal chiziqlar
+    (cfg.hlines || []).forEach(function (h) {
+      if (h.y < y0 || h.y > y1) return;
+      var py = Y(h.y); g.strokeStyle = h.color; g.setLineDash([5, 4]); g.lineWidth = 1.2;
+      g.beginPath(); g.moveTo(L, py); g.lineTo(L + pw, py); g.stroke(); g.setLineDash([]);
+      g.fillStyle = h.color; g.font = mono; g.textAlign = "right"; g.textBaseline = "bottom"; g.fillText(h.label, L + pw - 6, py - 3);
+    });
+    // seriyalar
+    var panelC = css("--panel");
+    cfg.series.forEach(function (s) {
+      if (s.band) {
+        g.beginPath();
+        for (var bq = 0; bq < s.x.length; bq++) { var bx = X(s.x[bq]), by = Y(Math.max(s.y2[bq], y0)); if (bq === 0) g.moveTo(bx, by); else g.lineTo(bx, by); }
+        for (bq = s.x.length - 1; bq >= 0; bq--) g.lineTo(X(s.x[bq]), Y(Math.max(s.y1[bq], y0)));
+        g.closePath(); g.globalAlpha = 0.18; g.fillStyle = s.color; g.fill(); g.globalAlpha = 1; return;
+      }
+      if (s.points) {
+        for (var q = 0; q < s.x.length; q++) { g.beginPath(); g.arc(X(s.x[q]), Y(s.y[q]), 4.5, 0, 2 * Math.PI); g.fillStyle = s.color; g.fill(); g.lineWidth = 1.5; g.strokeStyle = panelC; g.stroke(); }
+        return;
+      }
+      g.strokeStyle = s.color; g.lineWidth = s.width || 2; g.setLineDash(s.dash ? [6, 4] : []);
+      if (s.fill) {
+        g.beginPath(); var started = false;
+        for (var i = 0; i < s.x.length; i++) { var yy = s.y[i]; if (!isFinite(yy)) continue; var a = X(s.x[i]), b = Y(Math.max(yy, y0)); if (!started) { g.moveTo(a, Y(y0)); g.lineTo(a, b); started = true; } else g.lineTo(a, b); }
+        g.lineTo(X(s.x[s.x.length - 1]), Y(y0)); g.closePath(); g.globalAlpha = 0.12; g.fillStyle = s.color; g.fill(); g.globalAlpha = 1;
+      }
+      g.beginPath(); var pen = false;
+      for (var j = 0; j < s.x.length; j++) {
+        var yv = s.y[j];
+        if (!isFinite(yv) || (cfg.yLog && yv <= 0)) { pen = false; continue; }
+        var qx = X(s.x[j]), qy = Y(Math.min(Math.max(yv, cfg.yLog ? y0 / 10 : y0 - (y1 - y0)), cfg.yLog ? y1 * 10 : y1 + (y1 - y0)));
+        if (!pen) { g.moveTo(qx, qy); pen = true; } else g.lineTo(qx, qy);
+      }
+      g.stroke(); g.setLineDash([]);
+    });
+    // hover chizig'i
+    if (hx !== undefined) {
+      g.strokeStyle = muted; g.lineWidth = 1; g.beginPath(); g.moveTo(Math.round(X(hx)) + 0.5, T); g.lineTo(Math.round(X(hx)) + 0.5, T + ph); g.stroke();
+      cfg.series.forEach(function (s) {
+        if (!s.y) return; var k = nearest(s.x, hx); if (s.points && k >= 0 && Math.abs(s.x[k] - hx) > (cfg.xMax - cfg.xMin) / 40) return; if (k < 0 || !isFinite(s.y[k]) || (cfg.yLog && s.y[k] <= 0)) return;
+        g.fillStyle = s.color; g.beginPath(); g.arc(X(s.x[k]), Y(s.y[k]), 3.5, 0, 2 * Math.PI); g.fill();
+      });
+    }
+    g.restore();
+  };
+  function nearest(arr, v) { var best = -1, bd = Infinity; for (var i = 0; i < arr.length; i++) { var d = Math.abs(arr[i] - v); if (d < bd) { bd = d; best = i; } } return best; }
+  Chart.prototype.hover = function (e) {
+    var cfg = this.cfg, b = this.box; if (!cfg || !b) return;
+    var r = this.c.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+    if (mx < b.L || mx > b.L + b.pw || my < b.T || my > b.T + b.ph) { this.ro.hidden = true; this.draw(); return; }
+    var xv = this.Xinv(mx); var k0 = nearest(cfg.series[0].x, xv); var xs = cfg.series[0].x[k0];
+    this.draw(xs);
+    var lines = [cfg.xFmt(xs)];
+    var tol = (cfg.xMax - cfg.xMin) / 40;
+    cfg.series.forEach(function (s) { if (!s.y) return; var k = nearest(s.x, xs); if (k >= 0 && isFinite(s.y[k]) && (!s.points || Math.abs(s.x[k] - xs) < tol)) lines.push(s.label + ": " + cfg.yFmt(s.y[k])); });
+    this.ro.innerHTML = lines.map(function (t) { return "<div>" + t + "</div>"; }).join("");
+    this.ro.hidden = false;
+    var ow = this.ro.offsetWidth, left = mx + 14; if (left + ow > r.width - 4) left = mx - ow - 14;
+    this.ro.style.left = Math.max(4, left) + "px"; this.ro.style.top = Math.max(4, my - 10) + "px";
+  };
+  function legend(el, items) {
+    el.innerHTML = items.map(function (it) { return '<span><i class="' + (it.dash ? "dash" : "") + '" style="background:' + it.color + ';color:' + it.color + '"></i>' + it.label + "</span>"; }).join("");
+  }
+
+  // ---------- Tablar ----------
+  var tabs = document.querySelectorAll("nav.tabs button");
+  function showTab(name) {
+    tabs.forEach(function (b) { b.setAttribute("aria-selected", b.dataset.tab === name ? "true" : "false"); });
+    document.querySelectorAll("section[role=tabpanel]").forEach(function (sec) { sec.hidden = sec.id !== "tab-" + name; });
+    if (name === "profile") runProfile(); if (name === "map") runMap(); if (name === "multi") runMulti(); if (name === "val") runVal(); if (name === "opt") runOpt(); if (window.__hooks && window.__hooks[name]) window.__hooks[name]();
+    try { localStorage.setItem("ionsil-tab", name); } catch (e) {}
+  }
+  tabs.forEach(function (b) { b.addEventListener("click", function () { showTab(b.dataset.tab); }); });
+
+  // ---------- 1. Profil ----------
+  var state = { ion: "Ta" };
+  var pick = $("ionpick");
+  MAIN.forEach(function (k) {
+    var b = document.createElement("button"); b.type = "button"; b.textContent = k + "⁺"; b.dataset.ion = k; b.title = IONS[k].name;
+    b.addEventListener("click", function () { setIon(k); }); pick.appendChild(b);
+  });
+  var more = $("ionMore");
+  more.innerHTML = '<option value="">Boshqa ion…</option>' + EXTRA.map(function (k) { return '<option value="' + k + '">' + k + "⁺ — " + IONS[k].name + "</option>"; }).join("");
+  more.addEventListener("change", function () { if (more.value) setIon(more.value); });
+  function setIon(k) {
+    state.ion = k;
+    pick.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.ion === k ? "true" : "false"); });
+    more.value = EXTRA.indexOf(k) >= 0 ? k : "";
+    var ph = IONS[k].phases; var tgt = $("tgt");
+    tgt.innerHTML = ph.length ? ph.map(function (p, i) { return '<option value="' + p[1] + '"' + (i === 0 ? " selected" : "") + ">" + p[0] + " — " + fx(p[1] * 100, 1) + " at.%</option>"; }).join("") : '<option value="0.3333">— (inert ion)</option>';
+    tgt.disabled = !ph.length;
+    runProfile();
+  }
+  var Er = $("Er"), E = $("E"), Dr = $("Dr"), D = $("D");
+  Er.addEventListener("input", function () { E.value = Er.value; runProfile(); });
+  E.addEventListener("input", function () { var v = +E.value; if (v > 0) { Er.value = Math.min(300, Math.max(1, v)); runProfile(); } });
+  Dr.addEventListener("input", function () { var v = Math.pow(10, +Dr.value); var e = Math.floor(+Dr.value); var m = v / Math.pow(10, e); D.value = m.toFixed(1).replace(/\.0$/, "") + "e" + e; runProfile(); });
+  D.addEventListener("input", function () { var v = parseDose(D.value); if (v) { Dr.value = Math.log10(v); runProfile(); } });
+  ["sp", "tgt", "oRp", "odRp", "oY", "ang"].forEach(function (id) { $(id).addEventListener("input", runProfile); $(id).addEventListener("change", runProfile); });
+
+  var chP = new Chart($("cProfile"), $("roProfile"));
+  var last = null;
+  function runProfile() {
+    if ($("tab-profile").hidden) return;
+    var dose = parseDose(D.value), en = +E.value;
+    if (!(dose > 0) || !(en > 0)) return;
+    var target = +$("tgt").value || 1 / 3;
+    var r = P.simulate({ ion: state.ion, energy: en, dose: dose, sputter: $("sp").checked, targetFraction: target, angle: Math.min(89, Math.max(0, +$("ang").value || 0)),
+      RpOverride: +$("oRp").value || 0, dRpOverride: +$("odRp").value || 0, Yoverride: +$("oY").value || 0 });
+    last = r;
+    var ion = IONS[state.ion];
+    var phName = ion.phases.length ? ($("tgt").selectedOptions[0].textContent.split(" — ")[0]) : "";
+    var yPct = r.f.map(function (f) { return f * 100; });
+    var ymax = Math.max(Math.max.apply(null, yPct) * 1.15, ion.di ? target * 100 * 1.25 : 1);
+    var series = [{ x: r.x, y: yPct, color: css("--accent"), label: state.ion, width: 2.2, fill: true }];
+    var leg = [{ color: css("--accent"), label: state.ion + "⁺ → Si, " + fx(en, 0) + " keV, " + sci(dose) + " sm⁻²" }];
+    if (r.sputter) {
+      var g = r.x.map(function (xn) { return P.fraction(xn * 1e-7, r.Rp, r.dRp, dose, 0) * 100; });
+      series.push({ x: r.x, y: g, color: css("--s4"), label: "purkashsiz", dash: true, width: 1.5 });
+      leg.push({ color: css("--s4"), label: "Purkashsiz Gauss profili", dash: true });
+    }
+    var hl = [];
+    if (ion.di) hl.push({ y: target * 100, color: css("--s2"), label: phName + " " + fx(target * 100, 1) + "%" });
+    if (r.sputter && isFinite(r.fSat) && r.fSat * 100 < ymax) hl.push({ y: r.fSat * 100, color: css("--bad"), label: "1/Y = " + fx(r.fSat * 100, 1) + "%" });
+    chP.set({ series: series, xMin: 0, xMax: r.x[r.x.length - 1], yMin: 0, yMax: ymax, hlines: hl,
+      xLabel: "Chuqurlik, nm", yLabel: ion.di ? "Metall ulushi, at.%" : "Ar ulushi, at.%",
+      xFmt: function (v) { return fx(v, 1) + " nm"; }, yFmt: function (v) { return fx(v, 2) + " at.%"; } });
+    legend($("lgProfile"), leg);
+    $("pTitle").textContent = ion.name + " ionlarining Si dagi taqsimoti";
+
+    var vd = $("verdict"), ph = P.phaseAnalysis(state.ion, r.peak);
+    vd.className = "verdict " + ph.level;
+    vd.querySelector(".pill").textContent = { ok: "Stexiometrik", mid: "Nanokristallar", low: "Suyultirilgan", high: "Ortiqcha doza", info: "Inert" }[ph.level];
+    var extra = "";
+    if (ion.di && r.sputter && !isFinite(r.doseNeeded)) extra = " Purkash tufayli ulush 1/Y = " + fx(r.fSat * 100, 1) + " at.% dan oshmaydi, shuning uchun " + phName + " ga to'g'ridan-to'g'ri implantatsiya bilan erishib bo'lmaydi. Metall qatlamini magnetron purkash bilan cho'ktirib, keyin uni ion bilan aralashtirish tavsiya etiladi.";
+    vd.querySelector(".txt").textContent = ph.text + extra;
+    var W = checkInputs(r);
+    $("warns").innerHTML = W.map(function (w) { return '<div class="' + (w.k || "") + '">' + w.t + "</div>"; }).join("");
+    last.warnings = W.map(function (w) { return w.t; });
+    if (ion.di && window.IonSil2) {
+      var Z = window.IonSil2.zones(r.x, r.f, state.ion); last.zones = Z;
+      $("zones").innerHTML = Z.length ? "<b>Tarkibiy moslik zonalari</b> (implantatsiyadan keyin, faza emas): " + Z.map(function (z) { return '<span class="z">' + fx(z.from, 0) + "–" + fx(z.to, 0) + " nm: " + z.label + "</span>"; }).join("") : "";
+    } else $("zones").innerHTML = "";
+
+    var needTxt = !ion.di ? "—" : (isFinite(r.doseNeeded) ? sci(r.doseNeeded) + ' <small>sm⁻²</small>' : "erishib bo'lmaydi");
+    var s = [
+      ["Rp", fx(r.Rp * 1e7, 1) + " <small>nm</small>"],
+      ["ΔRp", fx(r.dRp * 1e7, 1) + " <small>nm</small>"],
+      ["Cho'qqidagi ulush", fx(r.peak * 100, 1) + " <small>at.%</small>", true],
+      ["Cho'qqi chuqurligi", fx(r.xPeak, 1) + " <small>nm</small>"],
+      ["Cho'qqi konsentratsiyasi", sci(r.peakConc) + " <small>sm⁻³</small>"],
+      ["Purkash koeff. Y", fx(r.Ycalc, 2) + (r.sputter && r.Y !== r.Ycalc ? ' <small>(qo\'lda ' + fx(r.Y, 2) + ")</small>" : "")],
+      ["To'yinish 1/Y", r.sputter ? fx(r.fSat * 100, 1) + " <small>at.%</small>" : "—"],
+      ["Saqlangan doza", fx(r.retainedRatio * 100, 0) + " <small>%</small>"],
+      ["Sirt chekinishi", r.sputter ? fx(r.recession, 1) + " <small>nm</small>" : "—"],
+      [(phName || "MSi₂") + " uchun doza", needTxt, true],
+      [(ion.di || "MSi₂") + " qalinligi (ekv.)", ion.di ? fx(r.eqThickness, 1) + " <small>nm</small>" : "—"],
+      ["≥ " + fx(target * 100, 1) + "% qatlam", ion.di ? fx(r.layerAbove, 1) + " <small>nm</small>" : "—"]
+    ];
+    $("stats").innerHTML = s.map(function (q) { return '<div class="stat' + (q[2] ? " key" : "") + '"><div class="k">' + q[0] + '</div><div class="v">' + q[1] + "</div></div>"; }).join("");
+  }
+
+  function checkInputs(r) {
+    var ion = IONS[r.ion], W = [], epa = r.energy / ion.M;
+    if (r.energy < 1 || r.energy > 2000) W.push({ k: "err", t: "Energiya " + fx(r.energy, 1) + " keV dastur chegarasidan (1–2000 keV) tashqarida." });
+    if (epa > 25) W.push({ t: "E/M₁ = " + fx(epa, 1) + " keV/a.m.b. > 25: elektron to'xtatish Lindhard–Scharff (LSS) sohasidan tashqarida, Rp aniqligi pasayadi." });
+    if (r.dose < 1e12 || r.dose > 1e19) W.push({ k: "err", t: "Doza " + sci(r.dose) + " sm⁻² tavsiya etilgan oraliqdan (10¹²–10¹⁹ sm⁻²) tashqarida." });
+    if (r.angle > 60) W.push({ k: r.angle >= 85 ? "err" : "", t: "θ = " + fx(r.angle, 0) + "°: Y(θ) = Y(0)·cos⁻⁵ᐟ³θ approksimatsiyasi θ ≤ 60° da o'rinli." });
+    var usr = []; if (+$("oRp").value) usr.push("Rp"); if (+$("odRp").value) usr.push("ΔRp"); if (+$("oY").value) usr.push("Y");
+    if (usr.length) W.push({ k: "usr", t: "Foydalanuvchi kiritgan parametr: " + usr.join(", ") + ". Natija shu qiymatlar bilan hisoblangan." });
+    if (r.peak > 0.75) W.push({ k: "err", t: "Cho'qqidagi ulush " + fx(r.peak * 100, 0) + " at.%: o'zgarmas zichlik farazi bunday yuqori tarkibda yaroqsiz." });
+    return W;
+  }
+  function reportText() {
+    var r = last; if (!r) return "";
+    var ion = IONS[r.ion], usr = [];
+    if (+$("oRp").value) usr.push("Rp"); if (+$("odRp").value) usr.push("ΔRp"); if (+$("oY").value) usr.push("Y");
+    var L = [
+      "IonSil v2.0 — implantatsiya hisoboti",
+      "Sana: " + new Date().toISOString().slice(0, 19).replace("T", " ") + " (UTC)",
+      "",
+      "KIRISH PARAMETRLARI",
+      "Ion: " + r.ion + "+ (" + ion.name + ", Z = " + ion.Z + ", M = " + ion.M + " a.m.b.); nishon: amorf Si, 2,329 g/sm3, N = " + P.SI.N.toExponential(3) + " sm-3",
+      "Energiya: " + r.energy + " keV; doza: " + r.dose.toExponential(2) + " ion/sm2; tushish burchagi: " + r.angle + " grad",
+      "Purkash hisobga olingan: " + (r.sputter ? "ha" : "yo'q") + "; Us(Si) = 4,7 eV",
+      "Foydalanuvchi kiritgan parametrlar: " + (usr.length ? usr.join(", ") : "yo'q"),
+      "",
+      "MODELLAR",
+      "Yadroviy to'xtatish: ZBL; elektron: Lindhard-Scharff; Rp, dRp: Lindhard tuzatmalari;",
+      "purkash: Sigmund, alfa - Yamamura; profil: Schulz-Wittmaack; burchak: Rp*cos(t), Y*cos^(-5/3)(t)",
+      "Farazlar: amorf nishon, o'zgarmas zichlik, tanlab purkash yo'q, diffuziya yo'q",
+      "",
+      "NATIJALAR",
+      "Rp = " + (r.Rp * 1e7).toFixed(1) + " nm; dRp = " + (r.dRp * 1e7).toFixed(1) + " nm",
+      "Sn = " + r.Sn.toExponential(3) + " eV*sm2; Se = " + r.Se.toExponential(3) + " eV*sm2",
+      "Purkash koeffitsiyenti Y = " + r.Ycalc.toFixed(2) + (r.sputter && r.Y !== r.Ycalc ? " (ishlatilgan: " + r.Y.toFixed(2) + ")" : ""),
+      "Cho'qqidagi ulush = " + (r.peak * 100).toFixed(2) + " at.% (" + r.xPeak.toFixed(1) + " nm)",
+      "Saqlangan doza = " + r.retained.toExponential(2) + " sm-2 (" + (r.retainedRatio * 100).toFixed(1) + "%)",
+      r.sputter ? "Sirt chekinishi = " + r.recession.toFixed(1) + " nm; to'yinish 1/Y = " + (r.fSat * 100).toFixed(1) + " at.%" : "",
+      ion.di ? "Maqsadli tarkib uchun kerakli doza = " + (isFinite(r.doseNeeded) ? r.doseNeeded.toExponential(2) + " sm-2" : "erishib bo'lmaydi") : "",
+      ion.di ? "Ekvivalent " + ion.di + " qalinligi = " + r.eqThickness.toFixed(1) + " nm (zichlik " + ion.diRho + " g/sm3)" : "",
+      "",
+      "XULOSA (tarkib bo'yicha, faza emas): " + P.phaseAnalysis(r.ion, r.peak).text
+    ];
+    if (r.zones && r.zones.length) { L.push(""); L.push("TARKIBIY MOSLIK ZONALARI"); r.zones.forEach(function (z) { L.push("  " + z.from.toFixed(0) + "-" + z.to.toFixed(0) + " nm: " + z.label); }); }
+    if (r.warnings && r.warnings.length) { L.push(""); L.push("OGOHLANTIRISHLAR"); r.warnings.forEach(function (w) { L.push("  - " + w); }); }
+    L.push(""); L.push("ANIQLIK: Rp jadval qiymatlaridan -1...+24% farq qiladi; Y ning noaniqligi ~10-20% (Uₛ ga bog'liq).");
+    L.push("MANBALAR: Ziegler, Biersack, Littmark (1985); Lindhard va boshq. (1963); Sigmund (1969); Yamamura, Tawara (1996); Schulz, Wittmaack (1976).");
+    return L.filter(function (l, i, a) { return l !== "" || (a[i - 1] !== ""); }).join("\n");
+  }
+  function csvText() {
+    var r = last; if (!r) return "";
+    var out = ["chuqurlik_nm;ulush_at_pct;konsentratsiya_sm-3"];
+    for (var i = 0; i < r.x.length; i += 2) out.push(r.x[i].toFixed(3) + ";" + (r.f[i] * 100).toFixed(4) + ";" + (r.f[i] * P.SI.N).toExponential(4));
+    return out.join("\n");
+  }
+  function toast(msg) { var t = $("toast"); t.textContent = msg; clearTimeout(toast.h); toast.h = setTimeout(function () { t.textContent = ""; }, 2500); }
+  function copy(text, okMsg) {
+    var fallback = function () {
+      var ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select();
+      var ok = false; try { ok = document.execCommand("copy"); } catch (e) {} document.body.removeChild(ta);
+      toast(ok ? okMsg : "Nusxa olinmadi. Brauzer ruxsat bermadi.");
+    };
+    try { navigator.clipboard.writeText(text).then(function () { toast(okMsg); }, fallback); } catch (e) { fallback(); }
+  }
+  function download(name, blob) { var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+  $("cpReport").addEventListener("click", function () { copy(reportText(), "Hisobot nusxalandi"); });
+  window.__cfgIds = ["E", "D", "sp", "tgt", "oRp", "odRp", "oY", "ang", "mapMetric", "mapEmax", "oDepth", "oThick", "oEmax"];
+  function cfgJSON() {
+    var inp = {}; window.__cfgIds.forEach(function (id) { var el = $(id); if (!el) return; inp[id] = el.type === "checkbox" ? el.checked : el.value; });
+    return JSON.stringify({ program: "IonSil", version: "2.0", saved: new Date().toISOString(), ion: state.ion, inputs: inp }, null, 2);
+  }
+  function cfgApply(txt) {
+    var c; try { c = JSON.parse(txt); } catch (e) { toast("JSON o'qilmadi: " + e.message); return; }
+    if (!c || c.program !== "IonSil" || !c.inputs) { toast("Bu IonSil sozlamalari fayli emas."); return; }
+    Object.keys(c.inputs).forEach(function (id) { var el = $(id); if (!el) return; if (el.type === "checkbox") el.checked = !!c.inputs[id]; else el.value = c.inputs[id]; });
+    if (c.ion && IONS[c.ion]) { var tg = $("tgt").value; setIon(c.ion); if (c.inputs.tgt) $("tgt").value = c.inputs.tgt; }
+    var dv = parseDose($("D").value); if (dv) $("Dr").value = Math.log10(dv); $("Er").value = Math.min(300, Math.max(1, +$("E").value || 50));
+    runProfile(); toast("Sozlamalar tiklandi (v" + (c.version || "?") + ")");
+  }
+  $("cfgExport").addEventListener("click", function () { copy(cfgJSON(), "JSON nusxalandi"); });
+  $("cfgDl").addEventListener("click", function () { download("IonSil_sozlamalar.json", new Blob([cfgJSON()], { type: "application/json" })); });
+  $("cfgApply").addEventListener("click", function () { cfgApply($("cfgText").value); });
+  $("cfgFile").addEventListener("change", function (e) { var f = e.target.files && e.target.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function () { $("cfgText").value = rd.result; cfgApply(rd.result); }; rd.readAsText(f); });
+  $("repDl").addEventListener("click", function () {
+    var esc = function (t) { return t.replace(/&/g, "&amp;").replace(/</g, "&lt;"); };
+    var html = "<!doctype html><meta charset='utf-8'><title>IonSil hisobot</title><body style='font-family:sans-serif;max-width:860px;margin:24px auto'><pre style='white-space:pre-wrap;font-size:13px'>" + esc(reportText()) + "</pre><img alt='profil' style='max-width:100%' src='" + $("cProfile").toDataURL("image/png") + "'></body>";
+    download("IonSil_hisobot_" + last.ion + "_" + last.energy + "keV.html", new Blob([html], { type: "text/html" }));
+  });
+  $("cpCsv").addEventListener("click", function () { copy(csvText(), "CSV nusxalandi"); });
+  $("dlCsv").addEventListener("click", function () { download("IonSil_" + last.ion + "_" + last.energy + "keV.csv", new Blob(["﻿" + csvText()], { type: "text/csv" })); });
+  $("dlPng").addEventListener("click", function () { $("cProfile").toBlob(function (b) { download("IonSil_" + last.ion + "_" + last.energy + "keV.png", b); }); });
+
+  // ---------- 2. Xarita ----------
+  var mapSel = { Ta: true, Nb: true, Cr: true, Ar: false };
+  var mapColors = function () { return { Ta: css("--accent"), Nb: css("--s2"), Cr: css("--s3"), Ar: css("--s4"), Mo: css("--s2"), W: css("--accent"), Ti: css("--s3"), Co: css("--s4"), Ni: css("--s4") }; };
+  $("mapIons").innerHTML = MAIN.map(function (k) { return '<label><input type="checkbox" data-ion="' + k + '"' + (mapSel[k] ? " checked" : "") + "> " + k + "⁺</label>"; }).join("");
+  $("mapIons").addEventListener("change", function (e) { mapSel[e.target.dataset.ion] = e.target.checked; runMap(); });
+  ["mapMetric", "mapEmax"].forEach(function (id) { $(id).addEventListener("change", runMap); $(id).addEventListener("input", runMap); });
+  var chM = new Chart($("cMap"), $("roMap"));
+  function metricVal(k, en, m) {
+    var ion = IONS[k];
+    if (m === "Rp") return P.ranges(ion, en).Rp * 1e7;
+    if (m === "dRp") return P.ranges(ion, en).dRp * 1e7;
+    var Yv = P.sputterYield(ion, en);
+    if (m === "Y") return Yv;
+    if (m === "fsat") return 100 / Yv;
+    if (m === "dose") return ion.di ? P.doseForFraction(k, en, 1 / 3, Yv) : NaN;
+  }
+  function runMap() {
+    if ($("tab-map").hidden) return;
+    var m = $("mapMetric").value, Emax = Math.max(5, +$("mapEmax").value || 200), cols = mapColors();
+    var ions = MAIN.filter(function (k) { return mapSel[k] && !(m === "dose" && !IONS[k].di); });
+    var n = 60, xs = []; for (var i = 0; i <= n; i++) xs.push(1 + (Emax - 1) * i / n);
+    var series = ions.map(function (k) { return { x: xs, y: xs.map(function (en) { return metricVal(k, en, m); }), color: cols[k], label: k + "⁺", width: 2 }; });
+    var all = []; series.forEach(function (s) { s.y.forEach(function (v) { if (isFinite(v) && v > 0) all.push(v); }); });
+    var yLog = m === "dose", ymin = 0, ymax = all.length ? Math.max.apply(null, all) * 1.1 : 1;
+    if (yLog) { ymin = Math.pow(10, Math.floor(Math.log10(Math.min.apply(null, all.length ? all : [1e15])))); ymax = Math.pow(10, Math.ceil(Math.log10(ymax))); if (ymax / ymin < 100) ymin = ymax / 100; }
+    var units = { Rp: "nm", dRp: "nm", Y: "atom/ion", fsat: "at.%", dose: "ion/sm²" };
+    var labels = { Rp: "Rp, nm", dRp: "ΔRp, nm", Y: "Y, atom/ion", fsat: "1/Y, at.%", dose: "Doza, ion/sm²" };
+    var hl = m === "fsat" ? [{ y: 100 / 3, color: css("--s2"), label: "MSi₂ 33,3%" }] : [];
+    chM.set({ series: series, xMin: 0, xMax: Emax, yMin: ymin, yMax: m === "fsat" ? Math.max(ymax, 40) : ymax, yLog: yLog, hlines: hl,
+      xLabel: "Energiya, keV", yLabel: labels[m],
+      xFmt: function (v) { return fx(v, 1) + " keV"; }, yFmt: function (v) { return (yLog ? sci(v) : fx(v, m === "Y" ? 2 : 1)) + " " + units[m]; } });
+    legend($("lgMap"), series.map(function (s) { return { color: s.color, label: s.label }; }));
+    $("mapTitle").textContent = $("mapMetric").selectedOptions[0].textContent;
+    var Es = [10, 25, 50, 100, 150, 200].filter(function (v) { return v <= Emax; });
+    var head = "<thead><tr><th>Ion</th>" + Es.map(function (v) { return '<th class="num">' + v + " keV</th>"; }).join("") + "</tr></thead>";
+    var body = "<tbody>" + ions.map(function (k) {
+      return "<tr><td>" + k + "⁺</td>" + Es.map(function (en) { var v = metricVal(k, en, m); return '<td class="num">' + (yLog ? (isFinite(v) ? sci(v) : "—") : fx(v, m === "Y" ? 2 : 1)) + "</td>"; }).join("") + "</tr>";
+    }).join("") + "</tbody>";
+    $("mapTable").innerHTML = head + body;
+  }
+
+  // ---------- 3. Ketma-ket implantatsiya ----------
+  var SEQ_IONS = ["Ta", "Nb", "Cr", "Mo", "W", "Ti", "Co", "Ni", "Ar"];
+  var seqDef = [{ on: true, ion: "Ta", E: 70, D: "1e16" }, { on: true, ion: "Nb", E: 55, D: "1e16" }, { on: true, ion: "Cr", E: 37, D: "1e16" }, { on: false, ion: "Ar", E: 30, D: "1e16" }, { on: false, ion: "Cr", E: 100, D: "1e16" }];
+  $("seqRows").innerHTML = seqDef.map(function (d, i) {
+    return '<div class="seqrow"><input type="checkbox" id="sqOn' + i + '"' + (d.on ? " checked" : "") + ' aria-label="' + (i + 1) + '-bosqich">' +
+      '<select id="sqIon' + i + '" aria-label="Ion">' + SEQ_IONS.map(function (k) { return '<option' + (k === d.ion ? " selected" : "") + ">" + k + "</option>"; }).join("") + "</select>" +
+      '<input type="number" id="sqE' + i + '" value="' + d.E + '" min="0.5" step="0.5" aria-label="Energiya">' +
+      '<input type="text" id="sqD' + i + '" value="' + d.D + '" aria-label="Doza">' +
+      '<input type="number" id="sqA' + i + '" value="0" min="0" max="60" step="1" aria-label="Burchak"></div>';
+  }).join("");
+  var seqIds = ["seqAlign", "seqRp", "seqSp"]; seqDef.forEach(function (d, i) { seqIds.push("sqOn" + i, "sqIon" + i, "sqE" + i, "sqD" + i, "sqA" + i); });
+  window.__cfgIds = (window.__cfgIds || []).concat(seqIds);
+  var seqT = null; seqIds.forEach(function (id) { $(id).addEventListener("input", function () { clearTimeout(seqT); seqT = setTimeout(runMulti, 150); }); $(id).addEventListener("change", function () { clearTimeout(seqT); seqT = setTimeout(runMulti, 50); }); });
+  var chMu = new Chart($("cMulti"), $("roMulti"));
+  function runMulti() {
+    if ($("tab-multi").hidden || !window.IonSil2) return;
+    var Q = window.IonSil2, align = $("seqAlign").checked, RpT = (+$("seqRp").value || 40) * 1e-7, cols = mapColors();
+    $("seqRp").disabled = !align;
+    var st = [];
+    seqDef.forEach(function (d, i) {
+      var on = $("sqOn" + i).checked, ion = $("sqIon" + i).value, ang = Math.min(60, Math.max(0, +$("sqA" + i).value || 0));
+      $("sqE" + i).disabled = align && on;
+      if (!on) return;
+      var E = +$("sqE" + i).value;
+      if (align) { E = P.energyForRp(ion, RpT / Math.cos(ang * Math.PI / 180)); $("sqE" + i).value = isFinite(E) ? +E.toFixed(1) : ""; }
+      var dose = parseDose($("sqD" + i).value);
+      if (isFinite(E) && E > 0 && dose > 0) st.push({ ion: ion, energy: E, dose: dose, angle: ang, sputter: $("seqSp").checked });
+    });
+    if (!st.length) { $("mTable").innerHTML = ""; $("mBal").innerHTML = ""; return; }
+    var res = Q.numericImplant(st, { steps: 200 });
+    var series = res.species.map(function (k) { return { x: res.x, y: res.f[k].map(function (v) { return v * 100; }), color: cols[k] || css("--s4"), label: k, width: 1.8 }; });
+    var sumPct = res.sum.map(function (v) { return v * 100; });
+    if (res.species.length > 1) series.push({ x: res.x, y: sumPct, color: css("--ink"), label: "Σ", width: 2.4, fill: true });
+    var pk = Math.max.apply(null, sumPct), pi = sumPct.indexOf(pk);
+    chMu.set({ series: series, xMin: 0, xMax: res.x[res.x.length - 1], yMin: 0, yMax: Math.max(pk * 1.15, 40), hlines: [{ y: 100 / 3, color: css("--s2"), label: "MSi₂ 33,3%" }],
+      xLabel: "Chuqurlik joriy sirtdan, nm", yLabel: "Ulush, at.%", xFmt: function (v) { return fx(v, 1) + " nm"; }, yFmt: function (v) { return fx(v, 2) + "%"; } });
+    legend($("lgMulti"), res.species.map(function (k) { return { color: cols[k] || css("--s4"), label: k }; }).concat(res.species.length > 1 ? [{ color: css("--ink"), label: "Yig'indi" }] : []));
+    var metals = res.species.filter(function (k) { return IONS[k].di; }), mSum = metals.reduce(function (a, k) { return a + res.f[k][pi]; }, 0);
+    var formula = metals.length ? "(" + metals.map(function (k) { return k + "<sub>" + fx(res.f[k][pi] / Math.max(mSum, 1e-12), 2) + "</sub>"; }).join("") + ")Si₂" : "—";
+    var lvl = res.overfull ? "high" : pk < 5 ? "low" : pk < 30 ? "mid" : pk <= 37 ? "ok" : "high";
+    var vd = $("mVerdict"); vd.className = "verdict " + lvl;
+    vd.querySelector(".pill").textContent = res.overfull ? "Model chegarasi" : { ok: "Stexiometrikka yaqin", mid: "Stexiometriyadan past", low: "Suyultirilgan", high: "Stexiometriyadan yuqori" }[lvl];
+    vd.querySelector(".txt").innerHTML = "Yig'ma cho'qqi " + fx(pk, 1) + " at.%, " + fx(res.x[pi], 1) + " nm chuqurlikda; metallar nisbati " + formula + ". Umumiy sirt chekinishi " + fx(res.recession, 1) + " nm." +
+      (res.overfull ? " Diqqat: ba'zi chuqurliklarda ulushlar yig'indisi 100% dan oshdi, o'zgarmas zichlik farazi buzilgan." : "") + " Bu tarkib bahosi; faza hosil bo'lishini XRD yoki TEM bilan tasdiqlash kerak.";
+    $("mTable").innerHTML = '<thead><tr><th>№</th><th>Ion</th><th class="num">E, keV</th><th class="num">Doza, sm⁻²</th><th class="num">θ, °</th><th class="num">Rp, nm</th><th class="num">ΔRp, nm</th><th class="num">Y</th><th class="num">Chekinish, nm</th></tr></thead><tbody>' +
+      res.stages.map(function (q) { return "<tr><td>" + q.stage + "</td><td>" + q.ion + "⁺</td><td class=\"num\">" + fx(q.energy, 1) + '</td><td class="num">' + sci(q.dose) + '</td><td class="num">' + fx(q.angle, 0) + '</td><td class="num">' + fx(q.Rp * 1e7, 1) + '</td><td class="num">' + fx(q.dRp * 1e7, 1) + '</td><td class="num">' + fx(q.Y, 2) + '</td><td class="num">' + fx(q.recessionAfter * 1e7, 1) + "</td></tr>"; }).join("") + "</tbody>";
+    $("mBal").innerHTML = '<thead><tr><th>Ion</th><th class="num">Kiritilgan, sm⁻²</th><th class="num">Saqlangan</th><th class="num">Purkalgan</th><th class="num">Qaytgan / qoldiq</th></tr></thead><tbody>' +
+      res.balance.map(function (b) { return "<tr><td>" + b.ion + '⁺</td><td class="num">' + sci(b.implanted) + '</td><td class="num">' + fx(b.retained / b.implanted * 100, 1) + '%</td><td class="num">' + fx(b.sputtered / b.implanted * 100, 1) + '%</td><td class="num">' + fx(b.other / b.implanted * 100, 2) + "%</td></tr>"; }).join("") + "</tbody>";
+  }
+
+  // ---------- Optimal rejim ----------
+  var METAL = { Ti: 4.506, Cr: 7.19, Co: 8.90, Ni: 8.908, Nb: 8.57, Mo: 10.28, Ta: 16.65, W: 19.25 }; // g/sm3
+  var OPT_IONS = ["Ti", "Cr", "Co", "Ni", "Nb", "Mo", "Ta", "W"], optIon = "Cr";
+  var op = $("optPick");
+  OPT_IONS.forEach(function (k) {
+    var b = document.createElement("button"); b.type = "button"; b.dataset.ion = k; b.textContent = IONS[k].di;
+    b.addEventListener("click", function () { optIon = k; runOpt(); }); op.appendChild(b);
+  });
+  ["oDepth", "oThick", "oEmax"].forEach(function (id) { $(id).addEventListener("input", runOpt); });
+  var chO = new Chart($("cOpt"), $("roOpt"));
+  function runOpt() {
+    if ($("tab-opt").hidden) return;
+    op.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.ion === optIon ? "true" : "false"); });
+    var ion = IONS[optIon], depth = Math.max(5, +$("oDepth").value || 60), thick = Math.max(1, +$("oThick").value || 30), Emax = +$("oEmax").value || 200;
+    var vd = $("optVerdict");
+    var centroid = function (sm) { var a = 0, b = 0; for (var q = 0; q < sm.x.length; q++) { a += sm.f[q]; b += sm.f[q] * sm.x[q]; } return b / a; };
+    var RpT = depth, E = P.energyForRp(optIon, RpT * 1e-7), cen = NaN;
+    for (var it = 0; it < 6 && isFinite(E); it++) {
+      var Yi = P.sputterYield(ion, E); if (1 / Yi < 1 / 3) break;
+      var di = P.doseForFraction(optIon, E, 1 / 3, Yi);
+      cen = centroid(P.simulate({ ion: optIon, energy: E, dose: di, sputter: true }));
+      if (Math.abs(cen - depth) < 0.5) break;
+      RpT = Math.max(2, RpT + (depth - cen)); E = P.energyForRp(optIon, RpT * 1e-7);
+    }
+    if (!isFinite(E)) { vd.className = "verdict high"; vd.querySelector(".pill").textContent = "Chegaradan tashqari"; vd.querySelector(".txt").textContent = "Bu chuqurlik uchun kerakli energiya 5 MeV dan oshadi."; return; }
+    var r = P.ranges(ion, E), Y = P.sputterYield(ion, E), lim = 1 / Y, feas = lim >= 1 / 3;
+    var dStoich = feas ? P.doseForFraction(optIon, E, 1 / 3, Y) : Infinity;
+    var thickAt = function (d) { return P.simulate({ ion: optIon, energy: E, dose: d, sputter: true }).eqThickness; };
+    var lo = Math.log(1e15), hi = Math.log(5e18), maxT = thickAt(5e18), dThick = Infinity;
+    if (maxT >= thick) { for (var k = 0; k < 36; k++) { var m = (lo + hi) / 2; if (thickAt(Math.exp(m)) < thick) lo = m; else hi = m; } dThick = Math.exp(hi); }
+    var dRec = feas ? Math.max(dStoich, isFinite(dThick) ? dThick : 0) : NaN;
+    var sim = P.simulate({ ion: optIon, energy: E, dose: feas ? dRec : 1e18, sputter: true });
+    var lvl, pill, txt;
+    if (!feas) { lvl = "high"; pill = "Erishib bo'lmaydi"; txt = "Purkash koeffitsiyenti Y = " + fx(Y, 2) + ", shuning uchun metall ulushi 1/Y = " + fx(lim * 100, 1) + " at.% dan oshmaydi. " + ion.di + " stexiometrik tarkibiga (33,3 at.%) to'g'ridan-to'g'ri implantatsiya bilan erishib bo'lmaydi. Pastda muqobil yo'l keltirilgan."; }
+    else if (!isFinite(dThick)) { lvl = "mid"; pill = "Qisman"; txt = "Stexiometrik tarkibga " + sci(dStoich) + " sm⁻² dozada erishiladi, lekin purkash tufayli ekvivalent qatlam qalinligi " + fx(maxT, 0) + " nm dan oshmaydi. " + fx(thick, 0) + " nm qatlam uchun muqobil yo'l pastda keltirilgan."; }
+    else { lvl = "ok"; pill = "Erishish mumkin"; txt = optIon + "⁺ ionlari " + fx(E, 1) + " keV energiya va " + sci(dRec) + " sm⁻² doza bilan implantatsiya qilinganda " + ion.di + " stexiometrik tarkibiga erishiladi, ekvivalent qatlam qalinligi " + fx(sim.eqThickness, 0) + " nm. Faza hosil bo'lganini qizdirishdan keyin XRD yoki TEM bilan tasdiqlash kerak."; }
+    if (E > Emax) { txt += " Diqqat: kerakli energiya " + fx(E, 0) + " keV implanter chegarasidan (" + fx(Emax, 0) + " keV) yuqori. Ikki karra zaryadlangan ionlardan foydalanish yoki chuqurlikni kamaytirish kerak."; if (lvl === "ok") lvl = "mid"; }
+    vd.className = "verdict " + lvl; vd.querySelector(".pill").textContent = pill; vd.querySelector(".txt").textContent = txt;
+    $("optTitle").textContent = ion.di + ": " + fx(depth, 0) + " nm chuqurlikda " + fx(thick, 0) + " nm qatlam";
+    var st = [["Energiya", fx(E, 1) + " <small>keV</small>", true], ["Rp / ΔRp", fx(r.Rp * 1e7, 0) + " / " + fx(r.dRp * 1e7, 0) + " <small>nm</small>"], ["Purkash koeff. Y", fx(Y, 2)], ["To'yinish 1/Y", fx(lim * 100, 1) + " <small>at.%</small>"],
+      ["33,3% uchun doza", feas ? sci(dStoich) + " <small>sm⁻²</small>" : "erishib bo'lmaydi"], ["Qalinlik uchun doza", isFinite(dThick) ? sci(dThick) + " <small>sm⁻²</small>" : "erishib bo'lmaydi"],
+      ["Tavsiya etilgan doza", feas ? sci(dRec) + " <small>sm⁻²</small>" : "—", true], ["Sirt chekinishi", fx(sim.recession, 0) + " <small>nm</small>"], ["Qatlam markazi (natija)", fx(centroid(sim), 0) + " <small>nm</small>"], ["Ekvivalent qalinlik", fx(sim.eqThickness, 0) + " <small>nm</small>"]];
+    $("optStats").innerHTML = st.map(function (q) { return '<div class="stat' + (q[2] ? " key" : "") + '"><div class="k">' + q[0] + '</div><div class="v">' + q[1] + "</div></div>"; }).join("");
+    var y = sim.f.map(function (v) { return v * 100; });
+    chO.set({ series: [{ x: sim.x, y: y, color: css("--accent"), label: optIon, width: 2.2, fill: true }], xMin: 0, xMax: sim.x[sim.x.length - 1], yMin: 0, yMax: Math.max(45, Math.max.apply(null, y) * 1.15),
+      hlines: [{ y: 100 / 3, color: css("--s2"), label: ion.di + " 33,3%" }].concat(lim * 100 < 45 ? [{ y: lim * 100, color: css("--bad"), label: "1/Y = " + fx(lim * 100, 1) + "%" }] : []),
+      xLabel: "Chuqurlik, nm", yLabel: "Metall ulushi, at.%", xFmt: function (v) { return fx(v, 1) + " nm"; }, yFmt: function (v) { return fx(v, 2) + " at.%"; } });
+    legend($("lgOpt"), [{ color: css("--accent"), label: feas ? "Profil tavsiya etilgan dozada" : "Profil 10¹⁸ sm⁻² dozada (to'yinish holati)" }]);
+    var alt = "";
+    if (!feas || !isFinite(dThick)) {
+      var nMs = ion.diRho * 6.02214076e23 / ion.diM, nMet = METAL[optIon] * 6.02214076e23 / ion.M, tM = thick * nMs / nMet;
+      var tgt = { Z: ion.Z, M: ion.M, N: nMet }, ar = IONS.Ar, l2 = Math.log(1), h2 = Math.log(2000);
+      for (var j = 0; j < 50; j++) { var mm = (l2 + h2) / 2; if (P.ranges(ar, Math.exp(mm), tgt).Rp < tM * 1e-7) l2 = mm; else h2 = mm; }
+      var Ear = Math.exp(h2);
+      alt = "<b>Muqobil yo'l: magnetron purkash va ion bilan aralashtirish.</b> " + fx(thick, 0) + " nm " + ion.di + " uchun Si sirtiga " + fx(tM, 1) + " nm qalinlikdagi " + optIon + " qatlamini cho'ktirish kerak (1 ta " + optIon + " atomiga 2 ta Si atomi kerak bo'ladi). Qatlamni Si bilan aralashtirish uchun Ar⁺ ionlarining metall ichidagi Rp si qatlam qalinligiga teng bo'lishi kerak, bunga taxminan " + fx(Ear, 0) + " keV to'g'ri keladi. Aralashtirish dozasi va qizdirish rejimi tajribada tanlanadi.";
+    }
+    $("optAlt").innerHTML = alt;
+    if (window.__hooks && window.__hooks.optTop) window.__hooks.optTop(optIon);
+  }
+
+  // ---------- 4. Tekshiruv ----------
+  // Dudda va boshq. (1993), 1a-rasm: [doza, 10^17 sm^-2; Cr ulushi, at.%] — raqamlashtirilgan
+  var EXP_CR = [[0.98, 10.5], [1.97, 19.2], [2.07, 19.2], [2.17, 20.2], [2.36, 24.8], [2.47, 28.4], [2.56, 33.1], [2.65, 33.1], [2.74, 33.1], [2.97, 33.1], [3.45, 33.1], [3.95, 33.1]];
+  var EXP_THR = 2.6; // maqola matni: 33,3% ga 2,6·10^17 da erishiladi
+  var MEVVA = [ // ion, kV, o'rtacha zaryad, doza, tajriba natijasi, qarshilik μΩ·sm, stexiometrikmi
+    ["Ti", 45, 2.1, 5e17, "C54-TiSi₂", "20–36", true],
+    ["Cr", 40, 2.1, 4e17, "CrSi₂, Cr:Si ≈ 1:2", "200–600*", true],
+    ["Co", 45, 1.7, 2e17, "epitaksial CoSi₂", "14–20", true],
+    ["Ni", 45, 1.8, 2e17, "NiSi₂", "6–20", true],
+    ["Nb", 45, 3.0, 3e17, "NbSi₂, metall yetishmaydi", "220–800", false],
+    ["Mo", 45, 3.1, 5e17, "MoSi₂, qarshilik yuqori (tarkib o'lchanmagan)", "450–600", false, true],
+    ["Ta", 45, 2.9, 3e17, "TaSi₂, metall yetishmaydi", "600–3000", false],
+    ["W", 45, 3.1, 5e17, "WSi₂, qarshilik yuqori (tarkib o'lchanmagan)", "270–3000", false, true]
+  ];
+  var chV = new Chart($("cVal"), $("roVal"));
+  function runVal() {
+    if ($("tab-val").hidden) return;
+    var ion = IONS.Cr, rr = P.ranges(ion, 200), Yv = P.sputterYield(ion, 200), st = 100 / 3;
+    var ds = [], cap = [], raw = [], nos = [];
+    for (var d = 0.5; d <= 4.5001; d += 0.05) {
+      ds.push(+d.toFixed(2));
+      var pf = P.peakFraction(rr.Rp, rr.dRp, d * 1e17, Yv) * 100; raw.push(pf); cap.push(Math.min(pf, st));
+      nos.push(P.peakFraction(rr.Rp, rr.dRp, d * 1e17, 0) * 100);
+    }
+    var cols = { m: css("--accent"), r: css("--s4"), e: css("--s2"), n: css("--s3") };
+    chV.set({ series: [
+        { x: ds, y: cap, color: cols.m, label: "Model (CrSi₂ gacha)", width: 2.4 },
+        { x: ds, y: raw, color: cols.r, label: "Model, implantatsiyadan keyin", dash: true, width: 1.5 },
+        { x: EXP_CR.map(function (p) { return p[0]; }), y: EXP_CR.map(function (p) { return p[1]; }), color: cols.e, label: "Tajriba (RBS)", points: true }
+      ], xMin: 0.5, xMax: 4.5, yMin: 0, yMax: 45, hlines: [{ y: st, color: css("--muted"), label: "CrSi₂ 33,3%" }],
+      xLabel: "Doza, 10¹⁷ Cr⁺/sm²", yLabel: "Cr ulushi, at.%",
+      xFmt: function (v) { return fx(v, 2) + "·10¹⁷ sm⁻²"; }, yFmt: function (v) { return fx(v, 1) + " at.%"; } });
+    legend($("lgVal"), [{ color: cols.m, label: "Model: cho'qqi ulushi, CrSi₂ stexiometriyasi bilan cheklangan" }, { color: cols.r, label: "Model: qizdirishgacha bo'lgan cho'qqi", dash: true }, { color: cols.e, label: "Tajriba, Dudda va boshq. (1993)" }]);
+
+    var thrM = P.doseForFraction("Cr", 200, 1 / 3, Yv) / 1e17, thrN = P.doseForFraction("Cr", 200, 1 / 3, 0) / 1e17;
+    var sub = EXP_CR.filter(function (p) { return p[1] < 33; }), plat = EXP_CR.filter(function (p) { return p[1] >= 33; });
+    var ratios = sub.map(function (p) { return P.peakFraction(rr.Rp, rr.dRp, p[0] * 1e17, Yv) * 100 / p[1]; });
+    var meanR = ratios.reduce(function (a, b) { return a + b; }, 0) / ratios.length;
+    var platDev = plat.map(function (p) { return Math.abs(Math.min(P.peakFraction(rr.Rp, rr.dRp, p[0] * 1e17, Yv) * 100, st) - p[1]); });
+    var rmsAll = Math.sqrt(EXP_CR.reduce(function (a, p) { var m = Math.min(P.peakFraction(rr.Rp, rr.dRp, p[0] * 1e17, Yv) * 100, st); return a + (m - p[1]) * (m - p[1]); }, 0) / EXP_CR.length);
+    function cls(e) { e = Math.abs(e); return e <= 10 ? "good" : e <= 25 ? "fair" : ""; }
+    var dThr = (thrM / EXP_THR - 1) * 100, dThrN = (thrN / EXP_THR - 1) * 100;
+    $("valTable").innerHTML = '<thead><tr><th>Ko\'rsatkich</th><th class="num">Tajriba</th><th class="num">Model</th><th class="num">Farq</th></tr></thead><tbody>' +
+      '<tr><td>Uzluksiz CrSi₂ uchun minimal doza</td><td class="num">2,60·10¹⁷</td><td class="num">' + fx(thrM, 2) + '·10¹⁷</td><td class="num ' + cls(dThr) + '">' + (dThr >= 0 ? "+" : "") + fx(dThr, 0) + '%</td></tr>' +
+      '<tr><td>Xuddi shu, purkashsiz model</td><td class="num">2,60·10¹⁷</td><td class="num">' + fx(thrN, 2) + '·10¹⁷</td><td class="num ' + cls(dThrN) + '">' + (dThrN >= 0 ? "+" : "") + fx(dThrN, 0) + '%</td></tr>' +
+      '<tr><td>Plato (≥ 2,6·10¹⁷), o\'rtacha chetlanish</td><td class="num">33,1%</td><td class="num">33,3%</td><td class="num good">' + fx(platDev.reduce(function (a, b) { return a + b; }, 0) / platDev.length, 1) + ' at.%</td></tr>' +
+      '<tr><td>Chegaradan past dozalar, model/tajriba</td><td class="num">—</td><td class="num">×' + fx(meanR, 2) + '</td><td class="num ' + cls((meanR - 1) * 100) + '">+' + fx((meanR - 1) * 100, 0) + '%</td></tr>' +
+      '<tr><td>Barcha 12 nuqta bo\'yicha o\'rtacha kvadratik xato</td><td class="num">—</td><td class="num">—</td><td class="num">' + fx(rmsAll, 1) + ' at.%</td></tr></tbody>';
+
+    var r3 = P.simulate({ ion: "Cr", energy: 200, dose: 3e17, sputter: true });
+    var m0 = 0, m1 = 0; for (var i = 0; i < r3.x.length; i++) { m0 += r3.f[i]; m1 += r3.f[i] * r3.x[i]; }
+    var cen = m1 / m0, top = cen - r3.eqThickness / 2, bot = cen + r3.eqThickness / 2;
+    function row(name, e, m) { var dd = (m / e - 1) * 100; return "<tr><td>" + name + '</td><td class="num">' + fx(e, 0) + ' nm</td><td class="num">' + fx(m, 0) + ' nm</td><td class="num ' + cls(dd) + '">' + (dd >= 0 ? "+" : "") + fx(dd, 0) + "%</td></tr>"; }
+    $("geoTable").innerHTML = '<thead><tr><th>Ko\'rsatkich</th><th class="num">XTEM</th><th class="num">Model</th><th class="num">Farq</th></tr></thead><tbody>' +
+      row("CrSi₂ qalinligi", 90, r3.eqThickness) + row("Ustki Si qatlami", 50, top) + row("Qatlam markazi", 95, cen) + row("Qatlam tubi", 140, bot) + "</tbody>";
+
+    var agree = 0;
+    $("mevvaTable").innerHTML = '<thead><tr><th>Ion</th><th class="num">E, keV</th><th class="num">Doza, sm⁻²</th><th class="num">Y</th><th class="num">1/Y, at.%</th><th>Model bashorati</th><th>Tajriba natijasi</th><th class="num">ρ, μΩ·sm</th><th>Moslik</th></tr></thead><tbody>' +
+      MEVVA.map(function (m) {
+        var E = m[1] * m[2], Ym = P.sputterYield(IONS[m[0]], E), lim = 100 / Ym, pred = lim >= st - 1;
+        var ok = pred === m[6]; if (ok) agree++;
+        return "<tr><td>" + m[0] + '⁺</td><td class="num">' + fx(E, 0) + '</td><td class="num">' + sci(m[3]) + '</td><td class="num">' + fx(Ym, 2) + '</td><td class="num">' + fx(lim, 1) + "</td><td>" + (pred ? "stexiometrik " + IONS[m[0]].di : "metall yetishmaydi") + "</td><td>" + m[4] + '</td><td class="num">' + m[5] + '</td><td class="' + (ok ? "good" : "") + '">' + (ok ? (m[7] ? "bilvosita mos" : "mos") : "mos emas") + "</td></tr>";
+      }).join("") + '</tbody>';
+
+    $("valSummary").innerHTML =
+      "<p style='margin:0 0 8px'><b>Miqdoriy moslik.</b> Uzluksiz CrSi₂ qatlami uchun minimal doza tajribadan " + fx(Math.abs(dThr), 0) + "% farq bilan topildi. Purkash modelisiz bu farq " + fx(Math.abs(dThrN), 0) + "% bo'lardi. Qatlam qalinligi va chuqurligi XTEM bilan 10–30% doirasida mos keladi.</p>" +
+      "<p style='margin:0 0 8px'><b>Sifat jihatidan moslik.</b> MEVVA tajribalarining " + MEVVA.length + " tasidan " + agree + " tasida sifat jihatidan mos bashorat olindi. Ti, Cr, Co, Ni, Nb va Ta da moslik bevosita, Mo va W da bilvosita: ularda metall yetishmasligi o'lchanmagan, faqat yuqori qarshilik qayd etilgan. Purkash chegarasi eng past bo'lgan Ta va W da qarshilik ham eng yuqori (3000 μΩ·sm gacha).</p>" +
+      "<p style='margin:0'><b>Cheklov.</b> Chegaradan past dozalarda model Cr ulushini taxminan " + fx((meanR - 1) * 100, 0) + "% ga oshirib ko'rsatadi. Sababi shundaki, tajribada qizdirish vaqtidagi diffuziya va RBS ning chuqurlik bo'yicha ajrata olish chegarasi profilni kengaytiradi, model esa bularni hisobga olmaydi.</p>";
+  }
+
+  // tema o'zgarsa qayta chizish
+  try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { runProfile(); runMap(); runMulti(); runVal(); }); } catch (e) {}
+  new MutationObserver(function () { runProfile(); runMap(); runMulti(); runVal(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  window.__ui = { Chart: Chart, $: $, fx: fx, sci: sci, css: css, legend: legend, parseDose: parseDose, copy: copy, download: download, toast: toast, mapColors: mapColors, inFrame: inFrame,
+    profileOpts: function () { return { ion: state.ion, energy: +$("E").value, dose: parseDose($("D").value), sputter: $("sp").checked, angle: Math.min(89, Math.max(0, +$("ang").value || 0)), RpOverride: +$("oRp").value || 0, dRpOverride: +$("odRp").value || 0, Yoverride: +$("oY").value || 0 }; },
+    lastProfile: function () { return last; } };
+  setIon("Ta");
+  var saved = null; try { saved = localStorage.getItem("ionsil-tab"); } catch (e) {}
+  if (saved && saved !== "profile" && $("tab-" + saved)) showTab(saved);
+})();
+</script>
+
+<script>
+/* IonSil v2.0 — yangi bo'limlar: Termik ishlov, Noaniqlik, Validatsiya, eng yaxshi rejimlar */
+(function () {
+  "use strict";
+  var U = window.__ui, P = window.IonSil, Q = window.IonSil2;
+  if (!U || !Q) return;
+  var $ = U.$, fx = U.fx, sci = U.sci, css = U.css, legend = U.legend, parseDose = U.parseDose;
+  window.__hooks = window.__hooks || {};
+  var stat = function (k, v, key) { return '<div class="stat' + (key ? " key" : "") + '"><div class="k">' + k + '</div><div class="v">' + v + "</div></div>"; };
+  var verdict = function (el, lvl, pill, txt) { el.className = "verdict " + lvl; el.querySelector(".pill").textContent = pill; el.querySelector(".txt").innerHTML = txt; };
+  var srcSummary = function (o) { return o.ion + "⁺, " + fx(o.energy, 1) + " keV, " + sci(o.dose) + " sm⁻², θ = " + fx(o.angle, 0) + "°" + (o.sputter ? ", purkash bilan" : ", purkashsiz"); };
+
+  // ================= TERMIK ISHLOV =================
+  var thIds = ["thPreset", "thD0", "thEa", "thCs", "thSurf", "thOn0", "thT0", "tht0", "thOn1", "thT1", "tht1", "thOn2", "thT2", "tht2"];
+  window.__cfgIds = (window.__cfgIds || []).concat(thIds);
+  var chT = new U.Chart($("cTh"), $("roTh"));
+  function applyPreset() {
+    var p = Q.PRESETS[$("thPreset").value];
+    if (p) { $("thD0").value = p.D0; $("thEa").value = p.Ea; $("thSrc").textContent = "Manba: " + p.src + ". " + p.note + ", " + p.range + "."; }
+    else $("thSrc").textContent = "Foydalanuvchi parametrlari: D₀ va Eₐ manbasini hisobotda ko'rsating.";
+    $("thD0").disabled = $("thEa").disabled = !!p;
+  }
+  $("thPreset").addEventListener("change", function () { applyPreset(); runThermal(); });
+  thIds.forEach(function (id) { if (id !== "thPreset") $(id).addEventListener("change", runThermal); });
+  $("thConv").addEventListener("click", function () {
+    var o = U.profileOpts(), r = P.simulate(o), steps = thSteps();
+    if (!steps.length) return;
+    $("thConvOut").textContent = "Hisoblanmoqda…";
+    setTimeout(function () {
+      var cv = Q.diffuseConvergence({ x: r.x, f: r.f }, thOpts(steps));
+      $("thConvOut").innerHTML = "Panjara va vaqt qadami (600/200 → 1200/400 → 2400/800 tugun/qadam): cho'qqi bo'yicha farq " + fx(cv.dPeak[0] * 100, 3) + "% va " + fx(cv.dPeak[1] * 100, 3) + "%, FWHM bo'yicha " + fx(cv.dFwhm[0] * 100, 3) + "% va " + fx(cv.dFwhm[1] * 100, 3) + "% (eng mayda panjaraga nisbatan). " +
+        (cv.dPeak[1] < 0.01 && cv.dFwhm[1] < 0.01 ? '<span class="ok-txt">Yechim konvergent (&lt; 1%).</span>' : '<span class="bad-txt">Yechim panjaraga sezgir; natijani ehtiyotkorlik bilan talqin qiling.</span>');
+    }, 20);
+  });
+  $("thTest").addEventListener("click", function () {
+    var t = Q.analyticGaussTest();
+    $("thConvOut").innerHTML = "Analitik test (cheksiz muhitda Gauss: σ² = ΔRp² + 2Dt, D = " + t.D.toExponential(2) + " sm²/s): cho'qqi xatosi " + fx(t.errPeak * 100, 3) + "%, FWHM xatosi " + fx(t.errFwhm * 100, 3) + "%, atomlar balansi " + t.balanceErr.toExponential(1) + ". " +
+      (Math.abs(t.errPeak) < 0.01 && Math.abs(t.errFwhm) < 0.01 ? '<span class="ok-txt">Test o\'tdi.</span>' : '<span class="bad-txt">Test o\'tmadi.</span>');
+  });
+  function thSteps() {
+    var st = [];
+    [0, 1, 2].forEach(function (i) { if ($("thOn" + i).checked) { var T = +$("thT" + i).value, t = +$("tht" + i).value; if (isFinite(T) && t > 0) st.push({ T: T, t: t }); } });
+    return st;
+  }
+  function thOpts(steps) {
+    var cs = $("thCs").value.trim();
+    return { steps: steps, D0: +$("thD0").value, Ea: +$("thEa").value, Cs: cs === "" ? 0 : (+cs) / 100, surface: $("thSurf").value };
+  }
+  function runThermal() {
+    if ($("tab-thermal").hidden) return;
+    var o = U.profileOpts(); $("thSource").textContent = srcSummary(o);
+    var r = P.simulate(o), steps = thSteps(), vd = $("thVerdict"), opts = thOpts(steps);
+    if (!steps.length) { verdict(vd, "info", "Bosqich yo'q", "Kamida bitta harorat–vaqt bosqichini yoqing."); return; }
+    if (!(opts.D0 > 0) || !(opts.Ea > 0)) { verdict(vd, "high", "Parametr yo'q", "D₀ va Eₐ musbat bo'lishi kerak."); return; }
+    var res = Q.diffuse({ x: r.x, f: r.f }, opts);
+    var xMax = Math.min(res.x[res.x.length - 1], Math.max(r.x[r.x.length - 1] * 1.5, res.after.depth99 * 1.1));
+    var cut = function (arr) { return arr.filter(function (_, i) { return res.x[i] <= xMax; }); };
+    var xs = cut(res.x), yi = cut(res.initial).map(function (v) { return v * 100; }), yf = cut(res.final).map(function (v) { return v * 100; });
+    chT.set({ series: [{ x: xs, y: yi, color: css("--s4"), label: "boshlang'ich", dash: true, width: 1.6 }, { x: xs, y: yf, color: css("--accent"), label: "termik ishlovdan keyin", width: 2.2, fill: true }],
+      xMin: 0, xMax: xMax, yMin: 0, yMax: Math.max(Math.max.apply(null, yi), Math.max.apply(null, yf), 1e-6) * 1.15, hlines: opts.Cs > 0 && opts.Cs * 100 < Math.max.apply(null, yi) ? [{ y: opts.Cs * 100, color: css("--s2"), label: "eruvchanlik Cₛ" }] : [],
+      xLabel: "Chuqurlik, nm", yLabel: "Metall ulushi, at.%", xFmt: function (v) { return fx(v, 1) + " nm"; }, yFmt: function (v) { return (v < 0.01 ? v.toExponential(2) : fx(v, 2)) + " at.%"; } });
+    legend($("lgTh"), [{ color: css("--s4"), label: "Implantatsiyadan keyin", dash: true }, { color: css("--accent"), label: "Termik ishlovdan keyin" }]);
+    var b = res.before, a = res.after;
+    $("thStats").innerHTML = res.history.map(function (h, i) { return stat((i + 1) + "-bosqich: D", h.D.toExponential(2) + " <small>sm²/s</small>") + stat("√(Dt)", (h.L >= 1e4 ? fx(h.L / 1000, 1) + " <small>mkm</small>" : fx(h.L, 1) + " <small>nm</small>")); }).join("") +
+      stat("Cho'qqi, oldin → keyin", fx(b.peak * 100, 2) + " → " + (a.peak * 100 < 0.01 ? (a.peak * 100).toExponential(1) : fx(a.peak * 100, 2)) + " <small>at.%</small>", true) +
+      stat("FWHM, oldin → keyin", fx(b.fwhm, 0) + " → " + fx(a.fwhm, 0) + " <small>nm</small>") + stat("Og'irlik markazi", fx(b.centroid, 0) + " → " + fx(a.centroid, 0) + " <small>nm</small>") +
+      stat("99% atomlar chuqurligi", fx(a.depth99, 0) + " <small>nm</small>") + stat("Atomlar balansi", (opts.surface === "sink" ? "sirtdan chiqdi " + fx(res.balanceErr * 100, 2) + "%" : "xato " + Math.abs(res.balanceErr).toExponential(1)));
+    var notes = [];
+    if (res.limitedBySolubility) notes.push("Erigan atomlarning diffuziya uzunligi (" + fx(res.Ltot / 1000, 0) + " mkm) hisoblash sohasidan (" + fx(res.domain / 1000, 1) + " mkm) katta; soha profilni aniq yechish uchun cheklangan, erigan atomlarning kichik ulushi chuqur chegaradan qaytadi.");
+    else if (res.truncated) notes.push("Diffuziya uzunligi (" + fx(res.Ltot / 1000, 0) + " mkm) hisoblash sohasidan (" + fx(res.domain / 1000, 0) + " mkm) katta: atomlar butun hajmga tarqaladi.");
+    if (!(opts.Cs > 0)) notes.push("Eruvchanlik chegarasi berilmagan: barcha atomlar erigan holda harakatlanadi deb olingan. Silitsid hosil qiluvchi yuqori dozalarda bu odatda o'rinli emas, chunki eruvchanlikdan ortiq atomlar pretsipitatlarga o'tadi.");
+    if ($("thPreset").value !== "Cr" || o.ion !== "Cr") notes.push("D₀ va Eₐ " + (Q.PRESETS[$("thPreset").value] ? "Cr uchun berilgan; tanlangan ion " + o.ion + " — parametrlar mos kelmasligi mumkin." : "foydalanuvchi tomonidan kiritilgan."));
+    var lvl = res.truncated || !(opts.Cs > 0) ? "mid" : "ok";
+    verdict(vd, lvl, lvl === "ok" ? "Hisoblandi" : "Ehtiyot bo'ling",
+      "Termik ishlov " + res.history.map(function (h) { return fx(h.T, 0) + " °C, " + fx(h.t, 0) + " s"; }).join(" + ") + ". Cho'qqi " + fx(b.peak * 100, 2) + " → " + (a.peak * 100 < 0.01 ? (a.peak * 100).toExponential(1) : fx(a.peak * 100, 2)) + " at.%. " + notes.join(" "));
+  }
+  window.__hooks.thermal = function () { applyPreset(); runThermal(); };
+
+  // ================= NOANIQLIK =================
+  var ucIds = ["ucRp", "ucdRp", "ucY", "ucD", "ucN", "ucSeed"];
+  window.__cfgIds = window.__cfgIds.concat(ucIds);
+  var chU = new U.Chart($("cUc"), $("roUc"));
+  $("ucRun").addEventListener("click", runUnc);
+  function runUnc() {
+    if ($("tab-unc").hidden) return;
+    var o = U.profileOpts(); $("ucSource").textContent = srcSummary(o);
+    var u = { Rp: (+$("ucRp").value || 0) / 100, dRp: (+$("ucdRp").value || 0) / 100, Y: (+$("ucY").value || 0) / 100, dose: (+$("ucD").value || 0) / 100 };
+    var n = Math.min(3000, Math.max(50, +$("ucN").value || 400)), seed = +$("ucSeed").value || 42;
+    var mc = Q.monteCarlo(o, u, n, seed), B = mc.band;
+    chU.set({ series: [{ x: B.x, y1: B.p05.map(function (v) { return v * 100; }), y2: B.p95.map(function (v) { return v * 100; }), band: true, color: css("--accent") },
+      { x: B.x, y: B.p50.map(function (v) { return v * 100; }), color: css("--accent"), label: "mediana", width: 2.2 },
+      { x: mc.nominal.x, y: mc.nominal.f.map(function (v) { return v * 100; }), color: css("--ink"), label: "nominal", dash: true, width: 1.4 }],
+      xMin: 0, xMax: B.x[B.x.length - 1], yMin: 0, yMax: Math.max(40, Math.max.apply(null, B.p95) * 115), hlines: P.IONS[o.ion].di ? [{ y: 100 / 3, color: css("--s2"), label: "MSi₂ 33,3%" }] : [],
+      xLabel: "Chuqurlik, nm", yLabel: "Metall ulushi, at.%", xFmt: function (v) { return fx(v, 1) + " nm"; }, yFmt: function (v) { return fx(v, 2) + " at.%"; } });
+    legend($("lgUc"), [{ color: css("--accent"), label: "90% ishonch oralig'i (5–95 persentil) va mediana" }, { color: css("--ink"), label: "Nominal hisob", dash: true }]);
+    var row = function (name, unit, nom, s, mul, d) { if (!s) return ""; return "<tr><td>" + name + '</td><td class="num">' + fx(nom * mul, d) + '</td><td class="num">' + fx(s.p50 * mul, d) + '</td><td class="num">' + fx(s.p05 * mul, d) + " – " + fx(s.p95 * mul, d) + '</td><td>' + unit + "</td></tr>"; };
+    $("ucTable").innerHTML = '<thead><tr><th>Natija</th><th class="num">Nominal</th><th class="num">Mediana</th><th class="num">90% oraliq</th><th>Birlik</th></tr></thead><tbody>' +
+      row("Cho'qqidagi ulush", "at.%", mc.nominal.peak, mc.peak, 100, 1) + row("Ekvivalent MSi₂ qalinligi", "nm", mc.nominal.eqThickness, mc.thickness, 1, 1) + row("Og'irlik markazi", "nm", mc.nominal.centroid, mc.centroid, 1, 1) +
+      (mc.fsat ? row("To'yinish 1/Y", "at.%", mc.inputs.Y > 0 ? 1 / mc.inputs.Y : NaN, mc.fsat, 100, 1) : "") + "</tbody>";
+    $("ucSens").innerHTML = '<thead><tr><th>№</th><th>Parametr</th><th class="num">+1σ</th><th class="num">Δ cho\'qqi</th><th class="num">Δ qalinlik</th><th class="num">Δ markaz</th></tr></thead><tbody>' +
+      mc.sensitivity.map(function (s, i) { var nm = { Rp: "Rp", dRp: "ΔRp", Y: "Y", dose: "Doza" }[s.param]; return "<tr><td>" + (i + 1) + "</td><td>" + nm + '</td><td class="num">' + fx(s.u * 100, 0) + '%</td><td class="num">' + (s.dPeak >= 0 ? "+" : "") + fx(s.dPeak * 100, 1) + '%</td><td class="num">' + (s.dThick >= 0 ? "+" : "") + fx(s.dThick * 100, 1) + '%</td><td class="num">' + (s.dCent >= 0 ? "+" : "") + fx(s.dCent * 100, 1) + "%</td></tr>"; }).join("") + "</tbody>";
+    $("ucNote").textContent = n + " ta takrorlash, boshlang'ich son (seed) " + seed + ": natija takrorlanadi. Parametrlar normal taqsimotdan olinadi; nominal qiymatlar: Rp = " + fx(mc.inputs.Rp, 1) + " nm, ΔRp = " + fx(mc.inputs.dRp, 1) + " nm, Y = " + fx(mc.inputs.Y, 2) + ".";
+  }
+  window.__hooks.unc = runUnc;
+
+  // ================= VALIDATSIYA =================
+  var ELEM = { B: [5, 10.81], C: [6, 12.011], N: [7, 14.007], O: [8, 15.999], Ne: [10, 20.180], Al: [13, 26.982], P: [15, 30.974], Ar: [18, 39.948], Ti: [22, 47.867], Cr: [24, 51.996], Mn: [25, 54.938], Fe: [26, 55.845], Co: [27, 58.933], Ni: [28, 58.693], Cu: [29, 63.546], Ga: [31, 69.723], Ge: [32, 72.630], As: [33, 74.922], Kr: [36, 83.798], Nb: [41, 92.906], Mo: [42, 95.95], In: [49, 114.82], Sb: [51, 121.76], Xe: [54, 131.29], Ta: [73, 180.95], W: [74, 183.84], Au: [79, 196.97] };
+  var ionObj = function (s) { var e = ELEM[s]; return e ? { Z: e[0], M: e[1] } : null; };
+  $("vaSample").addEventListener("click", function () {
+    $("vaSrim").value = "ion,E_keV,Rp_nm,dRp_nm,Y\n# Namuna: Gibbons jadvallari (1975), 100 keV — qiymatlarni manba bilan tekshiring\nB,100,307.2,69.0,\nP,100,123.8,45.6,\nAs,100,58.2,21.6,";
+    runValid();
+  });
+  ["vaSrim", "vaExp"].forEach(function (id) { $(id).addEventListener("input", function () { clearTimeout(runValid.t); runValid.t = setTimeout(runValid, 300); }); });
+  $("vaExpFile").addEventListener("change", function (e) { var f = e.target.files && e.target.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function () { $("vaExp").value = rd.result; runValid(); }; rd.readAsText(f); });
+  $("vaSrimFile").addEventListener("change", function (e) { var f = e.target.files && e.target.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function () { $("vaSrim").value = rd.result; runValid(); }; rd.readAsText(f); });
+  function parseCSV(txt) {
+    return txt.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(function (l) { return l && l[0] !== "#"; }).map(function (l) { return l.split(/[;,\t]/).map(function (c) { return c.trim(); }); });
+  }
+  var num = function (v) { if (v === undefined || v === "") return NaN; return parseFloat(String(v).replace(",", ".")); };
+  var chV = new U.Chart($("cVa"), $("roVa"));
+  function runValid() {
+    if ($("tab-valid").hidden) return;
+    // (a) SRIM / adabiyot jadvali
+    var rows = parseCSV($("vaSrim").value), out = [], errs = [];
+    rows.forEach(function (c, i) {
+      if (i === 0 && isNaN(num(c[1]))) return; // sarlavha
+      var io = ionObj(c[0]), E = num(c[1]);
+      if (!io || !(E > 0)) { errs.push(c.join(",")); return; }
+      var r = P.ranges(io, E), Ym = P.sputterYield(io, E);
+      out.push({ ion: c[0], E: E, Rp: num(c[2]), dRp: num(c[3]), Y: num(c[4]), mRp: r.Rp * 1e7, mdRp: r.dRp * 1e7, mY: Ym });
+    });
+    var rel = function (m, rf) { return isFinite(m) && isFinite(rf) && rf ? (m - rf) / rf * 100 : NaN; };
+    var cell = function (v, d) { return isFinite(v) ? fx(v, d) : "—"; };
+    var pc = function (v) { return isFinite(v) ? (v >= 0 ? "+" : "") + fx(v, 0) + "%" : "—"; };
+    $("vaTable").innerHTML = out.length ? '<thead><tr><th>Ion</th><th class="num">E, keV</th><th class="num">Rp etalon</th><th class="num">Rp IonSil</th><th class="num">δ</th><th class="num">ΔRp etalon</th><th class="num">ΔRp IonSil</th><th class="num">δ</th><th class="num">Y etalon</th><th class="num">Y IonSil</th><th class="num">δ</th></tr></thead><tbody>' +
+      out.map(function (q) { return "<tr><td>" + q.ion + '⁺</td><td class="num">' + fx(q.E, 1) + '</td><td class="num">' + cell(q.Rp, 1) + '</td><td class="num">' + fx(q.mRp, 1) + '</td><td class="num">' + pc(rel(q.mRp, q.Rp)) + '</td><td class="num">' + cell(q.dRp, 1) + '</td><td class="num">' + fx(q.mdRp, 1) + '</td><td class="num">' + pc(rel(q.mdRp, q.dRp)) + '</td><td class="num">' + cell(q.Y, 2) + '</td><td class="num">' + fx(q.mY, 2) + '</td><td class="num">' + pc(rel(q.mY, q.Y)) + "</td></tr>"; }).join("") + "</tbody>" : "";
+    var met = function (name, unit, m, rf) { var k = Q.metrics(m, rf); if (!k.n) return ""; return "<tr><td>" + name + '</td><td class="num">' + k.n + '</td><td class="num">' + fx(k.MAE, 2) + '</td><td class="num">' + fx(k.RMSE, 2) + '</td><td class="num">' + (k.bias >= 0 ? "+" : "") + fx(k.bias, 2) + '</td><td class="num">' + fx(k.meanAbsRel * 100, 1) + "%</td><td>" + unit + "</td></tr>"; };
+    $("vaMetrics").innerHTML = out.length ? '<thead><tr><th>Kattalik</th><th class="num">n</th><th class="num">MAE</th><th class="num">RMSE</th><th class="num">Bias</th><th class="num">O\'rt. |δ|</th><th>Birlik</th></tr></thead><tbody>' +
+      met("Rp", "nm", out.map(function (q) { return q.mRp; }), out.map(function (q) { return q.Rp; })) + met("ΔRp", "nm", out.map(function (q) { return q.mdRp; }), out.map(function (q) { return q.dRp; })) + met("Y", "atom/ion", out.map(function (q) { return q.mY; }), out.map(function (q) { return q.Y; })) + "</tbody>" : "";
+    $("vaErr").textContent = errs.length ? "O'qilmagan qatorlar (ion belgisi yoki energiya noto'g'ri): " + errs.join(" | ") : "";
+    // (b) tajriba profili
+    var o = U.profileOpts(); $("vaSource").textContent = srcSummary(o);
+    var pts = parseCSV($("vaExp").value).map(function (c) { return [num(c[0]), num(c[1]), num(c[2])]; }).filter(function (p) { return isFinite(p[0]) && isFinite(p[1]); });
+    var r = P.simulate(o), model = r.f.map(function (v) { return v * 100; });
+    var series = [{ x: r.x, y: model, color: css("--accent"), label: "IonSil", width: 2.2 }];
+    if (pts.length) series.push({ x: pts.map(function (p) { return p[0]; }), y: pts.map(function (p) { return p[1]; }), color: css("--s2"), label: "tajriba", points: true });
+    var ymax = Math.max(Math.max.apply(null, model), pts.length ? Math.max.apply(null, pts.map(function (p) { return p[1]; })) : 0) * 1.15 || 1;
+    chV.set({ series: series, xMin: 0, xMax: Math.max(r.x[r.x.length - 1], pts.length ? Math.max.apply(null, pts.map(function (p) { return p[0]; })) : 0), yMin: 0, yMax: ymax,
+      xLabel: "Chuqurlik, nm", yLabel: "Ulush, at.%", xFmt: function (v) { return fx(v, 1) + " nm"; }, yFmt: function (v) { return fx(v, 2) + " at.%"; } });
+    legend($("lgVa"), [{ color: css("--accent"), label: "IonSil (Implantatsiya profili bo'limidagi sozlamalar)" }].concat(pts.length ? [{ color: css("--s2"), label: "Tajriba nuqtalari" }] : []));
+    if (pts.length) {
+      var interp = function (x) { if (x <= r.x[0]) return model[0]; for (var i = 1; i < r.x.length; i++) if (r.x[i] >= x) { var t = (x - r.x[i - 1]) / (r.x[i] - r.x[i - 1]); return model[i - 1] * (1 - t) + model[i] * t; } return 0; };
+      var k = Q.metrics(pts.map(function (p) { return interp(p[0]); }), pts.map(function (p) { return p[1]; }));
+      var unc = pts.filter(function (p) { return isFinite(p[2]); }), within = unc.filter(function (p) { return Math.abs(interp(p[0]) - p[1]) <= p[2]; }).length;
+      $("vaExpOut").innerHTML = "<b>" + k.n + " nuqta:</b> MAE " + fx(k.MAE, 2) + " at.%, RMSE " + fx(k.RMSE, 2) + " at.%, bias " + (k.bias >= 0 ? "+" : "") + fx(k.bias, 2) + " at.%." +
+        (unc.length ? " O'lchash noaniqligi berilgan " + unc.length + " nuqtadan " + within + " tasida model noaniqlik oralig'ida." : " Uchinchi ustunda o'lchash noaniqligini (at.%) bersangiz, model shu oraliqqa tushishi ham tekshiriladi.");
+    } else $("vaExpOut").textContent = "Tajriba nuqtalarini kiriting: chuqurlik_nm, ulush_at.% (ixtiyoriy: noaniqlik_at.%).";
+  }
+  window.__hooks.valid = runValid;
+
+  // ================= ENG YAXSHI REJIMLAR =================
+  ["otRec", "otEmin", "otDmin", "otDmax"].forEach(function (id) { $(id).addEventListener("change", function () { if (window.__hooks.optTop) window.__hooks.optTop(window.__lastOptIon); }); });
+  window.__cfgIds = window.__cfgIds.concat(["otRec", "otEmin", "otDmin", "otDmax"]);
+  window.__hooks.optTop = function (ion) {
+    if (!ion) return; window.__lastOptIon = ion;
+    var t = { ion: ion, depth: Math.max(5, +$("oDepth").value || 60), thick: Math.max(1, +$("oThick").value || 30), Emin: Math.max(1, +$("otEmin").value || 10), Emax: +$("oEmax").value || 200,
+      Dmin: parseDose($("otDmin").value) || 1e15, Dmax: parseDose($("otDmax").value) || 2e18, maxRecession: +$("otRec").value || Infinity };
+    var o = Q.optimize(t);
+    $("optTop").innerHTML = '<thead><tr><th>№</th><th class="num">E, keV</th><th class="num">Doza, sm⁻²</th><th class="num">Cho\'qqi, at.%</th><th class="num">Markaz, nm</th><th class="num">Qalinlik, nm</th><th class="num">Chekinish, nm</th><th class="num">Saqlangan</th><th>Holat</th></tr></thead><tbody>' +
+      o.top.map(function (c, i) { return "<tr><td>" + (i + 1) + '</td><td class="num">' + fx(c.E, 1) + '</td><td class="num">' + sci(c.dose) + '</td><td class="num">' + fx(c.peak * 100, 1) + '</td><td class="num">' + fx(c.centroid, 0) + '</td><td class="num">' + fx(c.eqThickness, 0) + '</td><td class="num">' + fx(c.recession, 0) + '</td><td class="num">' + fx(c.retainedRatio * 100, 0) + "%</td><td>" + (c.feasible ? '<span class="ok-txt">talablarga mos</span>' : c.okRecession ? "tarkib 30–37% dan tashqarida" : "chekinish chegaradan katta") + "</td></tr>"; }).join("") + "</tbody>";
+    $("optTopNote").textContent = o.evaluated + " ta rejim (36 energiya × 36 doza) baholandi. Mezon: qatlam markazi va qalinligining talabdan nisbiy farqi va cho'qqidagi ulush 30–37 at.% oralig'ida bo'lishi. Har bir tanlangan rejim to'liq simulyatsiya bilan qayta hisoblandi (cho'qqi farqi ≤ " + fx(Math.max.apply(null, o.top.map(function (c) { return c.check.dPeak * 100; })), 2) + "%)." +
+      (o.anyFeasible ? "" : " Hech bir rejim barcha talablarga javob bermadi; eng yaqinlari ko'rsatilgan.");
+  };
+})();
+
+</script>
+
+</body></html>
